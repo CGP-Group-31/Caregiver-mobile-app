@@ -1,12 +1,19 @@
 import 'package:dio/dio.dart';
-import '../../../core/network/dio_client.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import '../../../core/network/dio_client.dart';
 import '../../../core/session/session_manager.dart';
 
 class AuthService {
   static final _dio = DioClient.dio;
 
-  /// REGISTER
+  /// Helper: get device model
+  static Future<String> _getDeviceModel() async {
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    return androidInfo.model ?? "unknown";
+  }
+
+  /// REGISTER with dummy FCM & device info
   static Future<int> registerCaregiver({
     required String fullName,
     required String email,
@@ -17,6 +24,11 @@ class AuthService {
     required String address,
   }) async {
     try {
+      const fcmToken = "dummy_fcm_token";
+      const appType = "android";
+
+      final deviceModel = await _getDeviceModel();
+
       final response = await _dio.post(
         "/api/v1/caregiver/auth/register",
         data: {
@@ -27,8 +39,13 @@ class AuthService {
           "date_of_birth": dateOfBirth,
           "gender": gender,
           "address": address,
+          "fcm_token": fcmToken,
+          "app_type": appType,
+          "device_model": deviceModel,
         },
       );
+
+      await SessionManager.saveFCMToken(fcmToken);
 
       return response.data["user_id"];
     } on DioException catch (e) {
@@ -42,14 +59,10 @@ class AuthService {
     required String password,
   }) async {
     try {
-      // Dummy values for now
       const fcmToken = "dummy_fcm_token";
       const appType = "android";
 
-      // Get device model
-      final deviceInfo = DeviceInfoPlugin();
-      final androidInfo = await deviceInfo.androidInfo;
-      final deviceModel = androidInfo.model ?? "unknown";
+      final deviceModel = await _getDeviceModel();
 
       final response = await _dio.post(
         "/api/v1/caregiver/auth/login",
@@ -62,7 +75,6 @@ class AuthService {
         },
       );
 
-      // Save FCM token in session
       await SessionManager.saveFCMToken(fcmToken);
 
       return response.data;
