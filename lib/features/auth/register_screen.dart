@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/session/session_manager.dart';
 import '../dashboard/dashboard_screen.dart';
 import 'auth_service.dart';
+import 'elder_basic_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -45,8 +46,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        MaterialPageRoute(builder: (_) => const ElderBasicScreen()),
       );
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),

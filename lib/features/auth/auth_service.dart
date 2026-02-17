@@ -4,7 +4,7 @@ import '../../../core/network/dio_client.dart';
 import '../../../core/session/session_manager.dart';
 
 class AuthService {
-  static final _dio = DioClient.dio;
+  static final Dio _dio = DioClient.dio;
 
   /// Helper: get device model
   static Future<String> _getDeviceModel() async {
@@ -13,7 +13,7 @@ class AuthService {
     return androidInfo.model ?? "unknown";
   }
 
-  /// REGISTER with dummy FCM & device info
+  /// REGISTER Caregiver
   static Future<int> registerCaregiver({
     required String fullName,
     required String email,
@@ -53,7 +53,7 @@ class AuthService {
     }
   }
 
-  /// LOGIN with dummy FCM & device info
+  /// LOGIN Caregiver
   static Future<Map<String, dynamic>> loginCaregiver({
     required String email,
     required String password,
@@ -80,6 +80,42 @@ class AuthService {
       return response.data;
     } on DioException catch (e) {
       throw Exception(e.response?.data ?? "Login failed");
+    }
+  }
+
+  /// CREATE ELDER
+  static Future<Map<String, dynamic>> createElder({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+    required String dateOfBirth,
+    required String gender,
+    required String address,
+    required int caregiverId,
+    required String relationshipType,
+    required bool isPrimary,
+  }) async {
+    try {
+      final response = await _dio.post(
+        "/api/v1/caregiver/elder-create/register",
+        data: {
+          "full_name": fullName,
+          "email": email,
+          "phone": phone,
+          "password": password,
+          "date_of_birth": dateOfBirth,
+          "gender": gender,
+          "address": address,
+          "caregiver_id": caregiverId,
+          "relationship_type": relationshipType,
+          "is_primary": isPrimary,
+        },
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data ?? "Elder creation failed");
     }
   }
 }
