@@ -64,7 +64,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
           : null,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: cGrey2.withOpacity(0.35), width: 1),
+        borderSide: BorderSide(color: cGrey2.withValues(alpha: 0.35), width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -97,7 +97,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: filled ? cTextDark : cGrey2.withOpacity(0.35),
+            color: filled ? cTextDark : cGrey2.withValues(alpha: 0.35),
           ),
         );
       }),
@@ -154,16 +154,16 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: cMint.withOpacity(0.35),
+                      color: cMint.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: cGrey2.withOpacity(0.18)),
+                      border: Border.all(color: cGrey2.withValues(alpha: 0.35)),
                     ),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         children: [
                           DropdownButtonFormField<String>(
-                            value: bloodType,
+                            initialValue: bloodType,
                             items: bloodTypes
                                 .map(
                                   (b) => DropdownMenuItem(
