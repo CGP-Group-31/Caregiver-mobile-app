@@ -6,14 +6,31 @@ import '../../../core/session/session_manager.dart';
 class AuthService {
   static final Dio _dio = DioClient.dio;
 
-  /// Helper: get device model
+  // ================= DEVICE MODEL =================
   static Future<String> _getDeviceModel() async {
     final deviceInfo = DeviceInfoPlugin();
     final androidInfo = await deviceInfo.androidInfo;
     return androidInfo.model ?? "unknown";
   }
 
-  /// REGISTER Caregiver
+  // ================= ERROR HANDLER =================
+  static Exception _handleError(DioException e) {
+    final responseData = e.response?.data;
+
+    if (responseData != null && responseData["detail"] != null) {
+      if (responseData["detail"] is List) {
+        final error = responseData["detail"][0];
+        final message = error["msg"];
+        return Exception(message);
+      } else {
+        return Exception(responseData["detail"].toString());
+      }
+    }
+
+    return Exception("Request failed");
+  }
+
+  // ================= REGISTER =================
   static Future<int> registerCaregiver({
     required String fullName,
     required String email,
@@ -49,11 +66,11 @@ class AuthService {
 
       return response.data["user_id"];
     } on DioException catch (e) {
-      throw Exception(e.response?.data ?? "Registration failed");
+      throw _handleError(e);
     }
   }
 
-  /// LOGIN Caregiver
+  // ================= LOGIN =================
   static Future<Map<String, dynamic>> loginCaregiver({
     required String email,
     required String password,
@@ -79,11 +96,11 @@ class AuthService {
 
       return response.data;
     } on DioException catch (e) {
-      throw Exception(e.response?.data ?? "Login failed");
+      throw _handleError(e);
     }
   }
 
-  /// CREATE ELDER
+  // ================= CREATE ELDER =================
   static Future<Map<String, dynamic>> createElder({
     required String fullName,
     required String email,
@@ -115,7 +132,7 @@ class AuthService {
 
       return response.data;
     } on DioException catch (e) {
-      throw Exception(e.response?.data ?? "Elder creation failed");
+      throw _handleError(e);
     }
   }
 }
