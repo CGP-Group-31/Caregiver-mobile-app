@@ -6,7 +6,7 @@ class MedicineService {
     required int elderId,
     required int caregiverId,
     required String name,
-    required String dosage,
+    required int dosage,
     required String instructions,
     required String time,
     required String repeatDays,
@@ -20,18 +20,26 @@ class MedicineService {
           "elderId": elderId,
           "caregiverId": caregiverId,
           "name": name,
-          "dosage": dosage.toString(),        // FORCE STRING
+          "dosage": dosage,
           "instructions": instructions,
-          "time": time.toString(),            // FORCE STRING
-          "repeatDays": repeatDays.toString(),// FORCE STRING
+          "time": time,
+          "repeatDays": repeatDays,
           "startDate": startDate,
           "endDate": endDate,
         },
       );
     } on DioException catch (e) {
-      throw Exception(
-        e.response?.data["detail"] ?? "Failed to create medicine",
-      );
+      final responseData = e.response?.data;
+
+      if (responseData != null && responseData["detail"] != null) {
+        if (responseData["detail"] is List) {
+          throw Exception(responseData["detail"][0]["msg"]);
+        } else {
+          throw Exception(responseData["detail"].toString());
+        }
+      } else {
+        throw Exception("Failed to create medicine");
+      }
     }
   }
 }

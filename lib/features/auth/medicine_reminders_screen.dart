@@ -33,7 +33,6 @@ class _MedicineRemindersScreenState
     "Mon","Tue","Wed","Thu","Fri","Sat","Sun"
   ];
 
-  // ================= TIME PICKER =================
   Future<void> pickTime() async {
     final picked = await showTimePicker(
       context: context,
@@ -52,7 +51,6 @@ class _MedicineRemindersScreenState
     }
   }
 
-  // ================= DATE PICKER =================
   Future<void> pickDate(bool isStart) async {
     final picked = await showDatePicker(
       context: context,
@@ -72,7 +70,6 @@ class _MedicineRemindersScreenState
     }
   }
 
-  // ================= SUBMIT =================
   Future<void> submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -99,17 +96,19 @@ class _MedicineRemindersScreenState
       final formattedTime =
           "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}";
 
-      final repeatDaysString =
-      isDaily ? "Daily" : selectedDays.join(",");
+      // IMPORTANT FIX: Never send "Daily"
+      final repeatDaysString = isDaily
+          ? "Mon,Tue,Wed,Thu,Fri,Sat,Sun"
+          : selectedDays.join(",");
 
       await MedicineService.createMedicine(
         elderId: elderId,
         caregiverId: caregiverId,
         name: nameCtrl.text.trim(),
-        dosage: dosageCtrl.text.trim(), // STRING
+        dosage: int.parse(dosageCtrl.text.trim()),
         instructions: instructionsCtrl.text.trim(),
         time: formattedTime,
-        repeatDays: repeatDaysString, // STRING
+        repeatDays: repeatDaysString,
         startDate: DateFormat('yyyy-MM-dd').format(startDate!),
         endDate: DateFormat('yyyy-MM-dd').format(endDate!),
       );
@@ -195,11 +194,14 @@ class _MedicineRemindersScreenState
 
               ListTile(
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide()),
-                title: Text(selectedTime == null
-                    ? "Select Time (24h)"
-                    : "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}"),
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(),
+                ),
+                title: Text(
+                  selectedTime == null
+                      ? "Select Time (24h)"
+                      : "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}",
+                ),
                 trailing: const Icon(Icons.access_time),
                 onTap: pickTime,
               ),
@@ -242,11 +244,14 @@ class _MedicineRemindersScreenState
 
               ListTile(
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide()),
-                title: Text(startDate == null
-                    ? "Select Start Date"
-                    : DateFormat('yyyy-MM-dd').format(startDate!)),
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(),
+                ),
+                title: Text(
+                  startDate == null
+                      ? "Select Start Date"
+                      : DateFormat('yyyy-MM-dd').format(startDate!),
+                ),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () => pickDate(true),
               ),
@@ -255,11 +260,14 @@ class _MedicineRemindersScreenState
 
               ListTile(
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide()),
-                title: Text(endDate == null
-                    ? "Select End Date"
-                    : DateFormat('yyyy-MM-dd').format(endDate!)),
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(),
+                ),
+                title: Text(
+                  endDate == null
+                      ? "Select End Date"
+                      : DateFormat('yyyy-MM-dd').format(endDate!),
+                ),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () => pickDate(false),
               ),
@@ -271,7 +279,11 @@ class _MedicineRemindersScreenState
                 child: ElevatedButton(
                   onPressed: loading ? null : submit,
                   child: loading
-                      ? const CircularProgressIndicator()
+                      ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                       : const Text("Save Medicine"),
                 ),
               ),
