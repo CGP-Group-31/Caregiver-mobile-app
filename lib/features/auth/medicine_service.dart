@@ -6,7 +6,7 @@ class MedicineService {
     required int elderId,
     required int caregiverId,
     required String name,
-    required int dosage,
+    required String dosage, // ✅ STRING (backend expects string)
     required String instructions,
     required String time,
     required String repeatDays,
@@ -20,7 +20,7 @@ class MedicineService {
           "elderId": elderId,
           "caregiverId": caregiverId,
           "name": name,
-          "dosage": dosage,
+          "dosage": dosage, // ✅ send as string
           "instructions": instructions,
           "time": time,
           "repeatDays": repeatDays,
@@ -33,12 +33,15 @@ class MedicineService {
 
       if (responseData != null && responseData["detail"] != null) {
         if (responseData["detail"] is List) {
-          throw Exception(responseData["detail"][0]["msg"]);
+          final error = responseData["detail"][0];
+          final field = error["loc"][1];
+          final message = error["msg"];
+          throw Exception("$field|$message");
         } else {
-          throw Exception(responseData["detail"].toString());
+          throw Exception("unknown|${responseData["detail"]}");
         }
       } else {
-        throw Exception("Failed to create medicine");
+        throw Exception("unknown|Failed to create medicine");
       }
     }
   }

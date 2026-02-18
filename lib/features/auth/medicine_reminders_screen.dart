@@ -29,6 +29,15 @@ class _MedicineRemindersScreenState
 
   bool loading = false;
 
+  // 🔴 Backend Field Errors
+  String? nameError;
+  String? dosageError;
+  String? instructionsError;
+  String? timeError;
+  String? startDateError;
+  String? endDateError;
+  String? repeatDaysError;
+
   final List<String> weekDays = [
     "Mon","Tue","Wed","Thu","Fri","Sat","Sun"
   ];
@@ -70,6 +79,16 @@ class _MedicineRemindersScreenState
     }
   }
 
+  void clearErrors() {
+    nameError = null;
+    dosageError = null;
+    instructionsError = null;
+    timeError = null;
+    startDateError = null;
+    endDateError = null;
+    repeatDaysError = null;
+  }
+
   Future<void> submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -83,34 +102,38 @@ class _MedicineRemindersScreenState
       return;
     }
 
-    setState(() => loading = true);
+    setState(() {
+      loading = true;
+      clearErrors();
+    });
 
     try {
       final caregiverId = await SessionManager.getUserId();
       final elderId = await SessionManager.getElderId();
 
-      if (caregiverId == null || elderId == null) {
-        throw Exception("Session expired. Login again.");
-      }
-
       final formattedTime =
           "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}";
 
-      // IMPORTANT FIX: Never send "Daily"
+      final startDateFormatted =
+      DateFormat('yyyy-MM-dd').format(startDate!);
+
+      final endDateFormatted =
+      DateFormat('yyyy-MM-dd').format(endDate!);
+
       final repeatDaysString = isDaily
           ? "Mon,Tue,Wed,Thu,Fri,Sat,Sun"
           : selectedDays.join(",");
 
       await MedicineService.createMedicine(
-        elderId: elderId,
-        caregiverId: caregiverId,
+        elderId: elderId!,
+        caregiverId: caregiverId!,
         name: nameCtrl.text.trim(),
-        dosage: int.parse(dosageCtrl.text.trim()),
+        dosage: dosageCtrl.text.trim(), // ✅ STRING
         instructions: instructionsCtrl.text.trim(),
         time: formattedTime,
         repeatDays: repeatDaysString,
-        startDate: DateFormat('yyyy-MM-dd').format(startDate!),
-        endDate: DateFormat('yyyy-MM-dd').format(endDate!),
+        startDate: startDateFormatted,
+        endDate: endDateFormatted,
       );
 
       if (!mounted) return;
@@ -122,8 +145,45 @@ class _MedicineRemindersScreenState
       Navigator.pop(context);
 
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      final error = e.toString().replaceFirst("Exception: ", "");
+
+      if (error.contains("|")) {
+        final parts = error.split("|");
+        final field = parts[0];
+        final message = parts[1];
+
+        setState(() {
+          switch (field) {
+            case "name":
+              nameError = message;
+              break;
+            case "dosage":
+              dosageError = message;
+              break;
+            case "instructions":
+              instructionsError = message;
+              break;
+            case "time":
+              timeError = message;
+              break;
+            case "startDate":
+              startDateError = message;
+              break;
+            case "endDate":
+              endDateError = message;
+              break;
+            case "repeatDays":
+              repeatDaysError = message;
+              break;
+            default:
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(message)));
+          }
+        });
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error)));
+      }
     }
 
     if (mounted) setState(() => loading = false);
@@ -153,12 +213,11 @@ class _MedicineRemindersScreenState
 
               TextFormField(
                 controller: nameCtrl,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: "Medicine Name",
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  errorText: nameError,
                 ),
-                validator: (v) =>
-                v == null || v.isEmpty ? "Required" : null,
               ),
 
               const SizedBox(height: 16),
@@ -166,15 +225,11 @@ class _MedicineRemindersScreenState
               TextFormField(
                 controller: dosageCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: "Dosage (Quantity)",
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  errorText: dosageError,
                 ),
-                validator: (v) {
-                  if (v == null || v.isEmpty) return "Required";
-                  if (int.tryParse(v) == null) return "Enter valid number";
-                  return null;
-                },
               ),
 
               const SizedBox(height: 16),
@@ -182,21 +237,16 @@ class _MedicineRemindersScreenState
               TextFormField(
                 controller: instructionsCtrl,
                 maxLines: 3,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: "Instructions",
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  errorText: instructionsError,
                 ),
-                validator: (v) =>
-                v == null || v.isEmpty ? "Required" : null,
               ),
 
               const SizedBox(height: 20),
 
               ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(),
-                ),
                 title: Text(
                   selectedTime == null
                       ? "Select Time (24h)"
@@ -205,6 +255,9 @@ class _MedicineRemindersScreenState
                 trailing: const Icon(Icons.access_time),
                 onTap: pickTime,
               ),
+
+              if (timeError != null)
+                Text(timeError!, style: const TextStyle(color: Colors.red)),
 
               const SizedBox(height: 20),
 
@@ -219,34 +272,9 @@ class _MedicineRemindersScreenState
                 },
               ),
 
-              if (!isDaily)
-                Wrap(
-                  spacing: 8,
-                  children: weekDays.map((day) {
-                    final selected = selectedDays.contains(day);
-                    return FilterChip(
-                      label: Text(day),
-                      selected: selected,
-                      onSelected: (val) {
-                        setState(() {
-                          if (val) {
-                            selectedDays.add(day);
-                          } else {
-                            selectedDays.remove(day);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-
               const SizedBox(height: 20),
 
               ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(),
-                ),
                 title: Text(
                   startDate == null
                       ? "Select Start Date"
@@ -256,13 +284,12 @@ class _MedicineRemindersScreenState
                 onTap: () => pickDate(true),
               ),
 
+              if (startDateError != null)
+                Text(startDateError!, style: const TextStyle(color: Colors.red)),
+
               const SizedBox(height: 12),
 
               ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(),
-                ),
                 title: Text(
                   endDate == null
                       ? "Select End Date"
@@ -272,6 +299,9 @@ class _MedicineRemindersScreenState
                 onTap: () => pickDate(false),
               ),
 
+              if (endDateError != null)
+                Text(endDateError!, style: const TextStyle(color: Colors.red)),
+
               const SizedBox(height: 30),
 
               SizedBox(
@@ -279,11 +309,7 @@ class _MedicineRemindersScreenState
                 child: ElevatedButton(
                   onPressed: loading ? null : submit,
                   child: loading
-                      ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                      ? const CircularProgressIndicator()
                       : const Text("Save Medicine"),
                 ),
               ),
