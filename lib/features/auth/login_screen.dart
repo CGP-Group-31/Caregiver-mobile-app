@@ -1,3 +1,4 @@
+import 'package:caregiver/features/dashboard/main_navigation_screen.dart';
 import 'package:flutter/material.dart';
 import '../../../core/session/session_manager.dart';
 import '../dashboard/dashboard_screen.dart';
@@ -54,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
       );
     } catch (e) {
       if (!mounted) return;
