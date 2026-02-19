@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/session/session_manager.dart';
 import 'medicine_service.dart';
+import 'emergency_contacts_page.dart';
+import 'theme.dart';
 
 class MedicineRemindersScreen extends StatefulWidget {
   const MedicineRemindersScreen({super.key});
@@ -20,29 +22,22 @@ class _MedicineRemindersScreenState
   final dosageCtrl = TextEditingController();
   final instructionsCtrl = TextEditingController();
 
-  TimeOfDay? selectedTime;
+  List<TimeOfDay> selectedTimes = [];
   DateTime? startDate;
   DateTime? endDate;
 
-  bool isDaily = false;
+  String repeatMode = "Daily";
   List<String> selectedDays = [];
 
   bool loading = false;
-
-  // 🔴 Backend Field Errors
-  String? nameError;
-  String? dosageError;
-  String? instructionsError;
-  String? timeError;
-  String? startDateError;
-  String? endDateError;
-  String? repeatDaysError;
 
   final List<String> weekDays = [
     "Mon","Tue","Wed","Thu","Fri","Sat","Sun"
   ];
 
-  Future<void> pickTime() async {
+  Future<void> addTime() async {
+    if (selectedTimes.length >= 6) return;
+
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
@@ -56,8 +51,12 @@ class _MedicineRemindersScreenState
     );
 
     if (picked != null) {
-      setState(() => selectedTime = picked);
+      setState(() => selectedTimes.add(picked));
     }
+  }
+
+  void removeTime(int index) {
+    setState(() => selectedTimes.removeAt(index));
   }
 
   Future<void> pickDate(bool isStart) async {
@@ -79,59 +78,68 @@ class _MedicineRemindersScreenState
     }
   }
 
-  void clearErrors() {
-    nameError = null;
-    dosageError = null;
-    instructionsError = null;
-    timeError = null;
-    startDateError = null;
-    endDateError = null;
-    repeatDaysError = null;
+  List<String> getFormattedTimes() {
+    return selectedTimes.map((t) {
+      return "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
+    }).toList();
   }
 
-  Future<void> submit() async {
+  String buildRepeatString() {
+    if (repeatMode == "Daily") return "Daily";
+    if (repeatMode == "EveryOtherDay") return "EveryOtherDay";
+    return selectedDays.join(",");
+  }
+
+  void clearForm() {
+    nameCtrl.clear();
+    dosageCtrl.clear();
+    instructionsCtrl.clear();
+    selectedTimes.clear();
+    startDate = null;
+    endDate = null;
+    repeatMode = "Daily";
+    selectedDays.clear();
+    setState(() {});
+  }
+
+  Future<void> submitMedicine() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (selectedTime == null ||
-        startDate == null ||
-        endDate == null ||
-        (!isDaily && selectedDays.isEmpty)) {
+    if (selectedTimes.isEmpty || startDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please complete all fields")),
+        const SnackBar(content: Text("Select time and start date")),
       );
       return;
     }
 
-    setState(() {
-      loading = true;
-      clearErrors();
-    });
+    if (repeatMode == "Custom" && selectedDays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Select at least one day")),
+      );
+      return;
+    }
+
+    setState(() => loading = true);
 
     try {
       final caregiverId = await SessionManager.getUserId();
       final elderId = await SessionManager.getElderId();
 
-      final formattedTime =
-          "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}";
-
       final startDateFormatted =
       DateFormat('yyyy-MM-dd').format(startDate!);
 
-      final endDateFormatted =
-      DateFormat('yyyy-MM-dd').format(endDate!);
-
-      final repeatDaysString = isDaily
-          ? "Mon,Tue,Wed,Thu,Fri,Sat,Sun"
-          : selectedDays.join(",");
+      final endDateFormatted = endDate == null
+          ? null
+          : DateFormat('yyyy-MM-dd').format(endDate!);
 
       await MedicineService.createMedicine(
         elderId: elderId!,
         caregiverId: caregiverId!,
         name: nameCtrl.text.trim(),
-        dosage: dosageCtrl.text.trim(), // ✅ STRING
+        dosage: dosageCtrl.text.trim(),
         instructions: instructionsCtrl.text.trim(),
-        time: formattedTime,
-        repeatDays: repeatDaysString,
+        times: getFormattedTimes(),
+        repeatDays: buildRepeatString(),
         startDate: startDateFormatted,
         endDate: endDateFormatted,
       );
@@ -139,54 +147,23 @@ class _MedicineRemindersScreenState
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Medicine created successfully")),
+        const SnackBar(content: Text("Medicine added")),
       );
 
-      Navigator.pop(context);
-
+      clearForm();
     } catch (e) {
-      final error = e.toString().replaceFirst("Exception: ", "");
-
-      if (error.contains("|")) {
-        final parts = error.split("|");
-        final field = parts[0];
-        final message = parts[1];
-
-        setState(() {
-          switch (field) {
-            case "name":
-              nameError = message;
-              break;
-            case "dosage":
-              dosageError = message;
-              break;
-            case "instructions":
-              instructionsError = message;
-              break;
-            case "time":
-              timeError = message;
-              break;
-            case "startDate":
-              startDateError = message;
-              break;
-            case "endDate":
-              endDateError = message;
-              break;
-            case "repeatDays":
-              repeatDaysError = message;
-              break;
-            default:
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(message)));
-          }
-        });
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error)));
-      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
     }
 
     if (mounted) setState(() => loading = false);
+  }
+
+  void goToNextPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EmergencyContactsPage()),
+    );
   }
 
   @override
@@ -200,122 +177,351 @@ class _MedicineRemindersScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.mainBackground,
       appBar: AppBar(
-        title: const Text("Add Medicine"),
+        elevation: 0,
+        backgroundColor: AppColors.primary,
         centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-
-              TextFormField(
-                controller: nameCtrl,
-                decoration: InputDecoration(
-                  labelText: "Medicine Name",
-                  border: const OutlineInputBorder(),
-                  errorText: nameError,
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: dosageCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: "Dosage (Quantity)",
-                  border: const OutlineInputBorder(),
-                  errorText: dosageError,
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: instructionsCtrl,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: "Instructions",
-                  border: const OutlineInputBorder(),
-                  errorText: instructionsError,
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              ListTile(
-                title: Text(
-                  selectedTime == null
-                      ? "Select Time (24h)"
-                      : "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}",
-                ),
-                trailing: const Icon(Icons.access_time),
-                onTap: pickTime,
-              ),
-
-              if (timeError != null)
-                Text(timeError!, style: const TextStyle(color: Colors.red)),
-
-              const SizedBox(height: 20),
-
-              SwitchListTile(
-                title: const Text("Repeat Daily"),
-                value: isDaily,
-                onChanged: (val) {
-                  setState(() {
-                    isDaily = val;
-                    if (val) selectedDays.clear();
-                  });
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              ListTile(
-                title: Text(
-                  startDate == null
-                      ? "Select Start Date"
-                      : DateFormat('yyyy-MM-dd').format(startDate!),
-                ),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () => pickDate(true),
-              ),
-
-              if (startDateError != null)
-                Text(startDateError!, style: const TextStyle(color: Colors.red)),
-
-              const SizedBox(height: 12),
-
-              ListTile(
-                title: Text(
-                  endDate == null
-                      ? "Select End Date"
-                      : DateFormat('yyyy-MM-dd').format(endDate!),
-                ),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () => pickDate(false),
-              ),
-
-              if (endDateError != null)
-                Text(endDateError!, style: const TextStyle(color: Colors.red)),
-
-              const SizedBox(height: 30),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: loading ? null : submit,
-                  child: loading
-                      ? const CircularProgressIndicator()
-                      : const Text("Save Medicine"),
-                ),
-              ),
-            ],
+        title: const Text(
+          "Add Medicines",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
           ),
         ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+
+            /// FORM AREA
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.containerBackground,
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      )
+                    ],
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
+                        _sectionTitle("Medicine Details"),
+
+                        _buildInputField(
+                          controller: nameCtrl,
+                          label: "Medicine Name",
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        _buildInputField(
+                          controller: dosageCtrl,
+                          label: "Dosage",
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        _buildInputField(
+                          controller: instructionsCtrl,
+                          label: "Instructions",
+                          maxLines: 3,
+                          validator: (v) =>
+                          v == null || v.isEmpty
+                              ? "Instructions required"
+                              : null,
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        _sectionTitle("Reminder Times"),
+
+                        const SizedBox(height: 10),
+
+                        ...selectedTimes.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final time = entry.value;
+                          final formatted =
+                              "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.sectionBackground,
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: ListTile(
+                              leading: const Icon(Icons.access_time,
+                                  color: AppColors.primary),
+                              title: Text(
+                                formatted,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete,
+                                    color: AppColors.sosButton),
+                                onPressed: () => removeTime(index),
+                              ),
+                            ),
+                          );
+                        }),
+
+                        if (selectedTimes.length < 6)
+                          Center(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                  BorderRadius.circular(30),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 25, vertical: 12),
+                              ),
+                              onPressed: addTime,
+                              icon: const Icon(Icons.add,
+                                  color: Colors.white),
+                              label: const Text(
+                                "Add Time",
+                                style:
+                                TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+
+                        const SizedBox(height: 30),
+
+                        _sectionTitle("Duration"),
+
+                        _buildDateTile(
+                          title: startDate == null
+                              ? "Select Start Date"
+                              : DateFormat('yyyy-MM-dd')
+                              .format(startDate!),
+                          onTap: () => pickDate(true),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        _buildDateTile(
+                          title: endDate == null
+                              ? "Select End Date (optional)"
+                              : DateFormat('yyyy-MM-dd')
+                              .format(endDate!),
+                          onTap: () => pickDate(false),
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        _sectionTitle("Repeat"),
+
+                        RadioListTile(
+                          activeColor: AppColors.primary,
+                          title: const Text("Daily"),
+                          value: "Daily",
+                          groupValue: repeatMode,
+                          onChanged: (v) =>
+                              setState(() => repeatMode = v!),
+                        ),
+                        RadioListTile(
+                          activeColor: AppColors.primary,
+                          title:
+                          const Text("Every Other Day"),
+                          value: "EveryOtherDay",
+                          groupValue: repeatMode,
+                          onChanged: (v) =>
+                              setState(() => repeatMode = v!),
+                        ),
+                        RadioListTile(
+                          activeColor: AppColors.primary,
+                          title:
+                          const Text("Specific Days"),
+                          value: "Custom",
+                          groupValue: repeatMode,
+                          onChanged: (v) =>
+                              setState(() => repeatMode = v!),
+                        ),
+
+                        if (repeatMode == "Custom")
+                          Wrap(
+                            spacing: 8,
+                            children: weekDays.map((day) {
+                              final selected =
+                              selectedDays.contains(day);
+
+                              return FilterChip(
+                                selectedColor:
+                                AppColors.primary,
+                                backgroundColor:
+                                AppColors.sectionBackground,
+                                label: Text(
+                                  day,
+                                  style: TextStyle(
+                                    color: selected
+                                        ? Colors.white
+                                        : AppColors.primaryText,
+                                  ),
+                                ),
+                                selected: selected,
+                                onSelected: (val) {
+                                  setState(() {
+                                    if (val) {
+                                      selectedDays.add(day);
+                                    } else {
+                                      selectedDays.remove(day);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            /// BUTTON AREA
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(30),
+                        ),
+                        padding:
+                        const EdgeInsets.symmetric(
+                            vertical: 14),
+                      ),
+                      onPressed:
+                      loading ? null : submitMedicine,
+                      child: loading
+                          ? const CircularProgressIndicator(
+                          color: Colors.white)
+                          : const Text(
+                        "Save Medicine",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight:
+                          FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                            color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(30),
+                        ),
+                        padding:
+                        const EdgeInsets.symmetric(
+                            vertical: 14),
+                      ),
+                      onPressed: goToNextPage,
+                      child: const Text(
+                        "Next",
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primaryText,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle:
+        const TextStyle(color: AppColors.textShade),
+        filled: true,
+        fillColor: AppColors.sectionBackground,
+        contentPadding:
+        const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateTile({
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.sectionBackground,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.calendar_today,
+            color: AppColors.primary),
+        title: Text(
+          title,
+          style: const TextStyle(
+              fontWeight: FontWeight.w500),
+        ),
+        onTap: onTap,
       ),
     );
   }

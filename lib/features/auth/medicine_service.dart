@@ -6,12 +6,12 @@ class MedicineService {
     required int elderId,
     required int caregiverId,
     required String name,
-    required String dosage, // ✅ STRING (backend expects string)
+    required String dosage,
     required String instructions,
-    required String time,
+    required List<String> times,
     required String repeatDays,
     required String startDate,
-    required String endDate,
+    String? endDate,
   }) async {
     try {
       await DioClient.dio.post(
@@ -20,9 +20,9 @@ class MedicineService {
           "elderId": elderId,
           "caregiverId": caregiverId,
           "name": name,
-          "dosage": dosage, // ✅ send as string
+          "dosage": dosage,
           "instructions": instructions,
-          "time": time,
+          "times": times,
           "repeatDays": repeatDays,
           "startDate": startDate,
           "endDate": endDate,
