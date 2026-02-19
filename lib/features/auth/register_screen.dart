@@ -11,14 +11,13 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // ---- Color palette (NOT using last 3 colors) ----
-  static const Color cPrimary = Color(0xFF2E7D7A); // teal
-  static const Color cBg = Color(0xFFD6EFE6); // light mint background
-  static const Color cMint = Color(0xFFBEE8DA); // mint
-  static const Color cSurface = Color(0xFFF6F7F3); // off white
-  static const Color cTextDark = Color(0xFF243333); // dark
-  static const Color cGrey1 = Color(0xFF6F7F7D); // grey
-  static const Color cGrey2 = Color(0xFF7C8B89); // grey
+  static const Color cPrimary = Color(0xFF2E7D7A);
+  static const Color cBg = Color(0xFFD6EFE6);
+  static const Color cMint = Color(0xFFBEE8DA);
+  static const Color cSurface = Color(0xFFF6F7F3);
+  static const Color cTextDark = Color(0xFF243333);
+  static const Color cGrey1 = Color(0xFF6F7F7D);
+  static const Color cGrey2 = Color(0xFF7C8B89);
 
   final _formKey = GlobalKey<FormState>();
 
@@ -29,7 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final dobCtrl = TextEditingController();
   final addressCtrl = TextEditingController();
 
-  String? gender; // dropdown selected value
+  String? gender;
 
   bool loading = false;
   bool showPassword = false;
@@ -47,7 +46,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ---------- UI helpers ----------
   InputDecoration _decor(String hint, {Widget? suffix}) {
     return InputDecoration(
       hintText: hint,
@@ -76,7 +74,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _stepDots() {
-    // Wireframe shows multiple dots; caregiver profile setup is step 1.
     const int total = 7;
     const int active = 1;
 
@@ -97,7 +94,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ---------- Validation helpers ----------
   String? _nameValidator(String? v) {
     final value = (v ?? "").trim();
     if (value.isEmpty) return "Full name is required";

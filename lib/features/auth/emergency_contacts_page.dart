@@ -9,17 +9,14 @@ class EmergencyContactsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // List used for display
     List<ContactModel> dummyContacts = [
       ContactModel(name: "John Doe", phone: "0711234567", relation: "Son"),
       ContactModel(name: "Dr. Smith", phone: "0779876543", relation: "Doctor"),
     ];
 
     return Scaffold(
-      // #D6EFE6 Main Screen Background
       backgroundColor: AppColors.mainBackground,
       appBar: AppBar(
-        // #2E7D7A Primary for Nav Bar
         backgroundColor: AppColors.primary,
         elevation: 0,
         centerTitle: true,

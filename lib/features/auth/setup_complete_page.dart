@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
+import '../dashboard/main_navigation_screen.dart';
 
 class SetupCompletePage extends StatelessWidget {
   const SetupCompletePage({super.key});
@@ -7,7 +8,6 @@ class SetupCompletePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // #D6EFE6 Main Background
       backgroundColor: AppColors.mainBackground,
       body: SafeArea(
         child: Padding(
@@ -16,12 +16,11 @@ class SetupCompletePage extends StatelessWidget {
             children: [
               const Spacer(),
 
-              // 1. Success Icon/Illustration Area
               Container(
                 height: 180,
                 width: 180,
                 decoration: BoxDecoration(
-                  color: AppColors.background, // #F6F7F3
+                  color: AppColors.background,
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.sectionSeparator, width: 2),
                 ),
@@ -29,13 +28,12 @@ class SetupCompletePage extends StatelessWidget {
                   child: Icon(
                     Icons.check_circle_rounded,
                     size: 100,
-                    color: AppColors.primary, // #2E7D7A
+                    color: AppColors.primary,
                   ),
                 ),
               ),
               const SizedBox(height: 40),
 
-              // 2. Heading - #243333 Primary Text
               const Text(
                 "All Set!",
                 style: TextStyle(
@@ -46,8 +44,6 @@ class SetupCompletePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // 3. Subtext - #6F7F7D Description Text
               const Text(
                 "Your emergency contacts and profile have been successfully configured. You're ready to use the app.",
                 textAlign: TextAlign.center,
@@ -66,7 +62,7 @@ class SetupCompletePage extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     // Navigate to Dashboard and clear navigation stack
-                    Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
+                    Navigator.pushNamedAndRemoveUntil(context, '../dashboard/main_navigation_screen.dart', (route) => false);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/session/session_manager.dart';
 import 'medicine_service.dart';
-import 'next_page.dart';
+import 'emergency_contacts_page.dart';
+import 'theme.dart';
 
 class MedicineRemindersScreen extends StatefulWidget {
   const MedicineRemindersScreen({super.key});
@@ -14,6 +15,7 @@ class MedicineRemindersScreen extends StatefulWidget {
 
 class _MedicineRemindersScreenState
     extends State<MedicineRemindersScreen> {
+
   final _formKey = GlobalKey<FormState>();
 
   final nameCtrl = TextEditingController();
@@ -24,7 +26,7 @@ class _MedicineRemindersScreenState
   DateTime? startDate;
   DateTime? endDate;
 
-  String repeatMode = "Daily"; // Daily, EveryOtherDay, Custom
+  String repeatMode = "Daily";
   List<String> selectedDays = [];
 
   bool loading = false;
@@ -157,6 +159,13 @@ class _MedicineRemindersScreenState
     if (mounted) setState(() => loading = false);
   }
 
+  void goToNextPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EmergencyContactsPage()),
+    );
+  }
+
   @override
   void dispose() {
     nameCtrl.dispose();
@@ -164,179 +173,230 @@ class _MedicineRemindersScreenState
     instructionsCtrl.dispose();
     super.dispose();
   }
-  void goToNextPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const NextPage(),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.mainBackground,
       appBar: AppBar(
-        title: const Text("Add Medicines"),
-        automaticallyImplyLeading: false,
+        elevation: 0,
+        backgroundColor: AppColors.primary,
         centerTitle: true,
+        title: const Text(
+          "Add Medicines",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
       ),
       body: SafeArea(
         child: Column(
           children: [
+
+            /// FORM AREA
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: nameCtrl,
-                        decoration: const InputDecoration(
-                          labelText: "Medicine Name",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: dosageCtrl,
-                        decoration: const InputDecoration(
-                          labelText: "Dosage",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: instructionsCtrl,
-                        maxLines: 3,
-                        validator: (v) =>
-                        v == null || v.isEmpty ? "Instructions required" : null,
-                        decoration: const InputDecoration(
-                          labelText: "Instructions",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.containerBackground,
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      )
+                    ],
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
 
-                      // TIMES
-                      Column(
-                        children: [
-                          ...selectedTimes.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final time = entry.value;
-                            final formatted =
-                                "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
+                        _sectionTitle("Medicine Details"),
 
-                            return ListTile(
-                              title: Text(formatted),
+                        _buildInputField(
+                          controller: nameCtrl,
+                          label: "Medicine Name",
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        _buildInputField(
+                          controller: dosageCtrl,
+                          label: "Dosage",
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        _buildInputField(
+                          controller: instructionsCtrl,
+                          label: "Instructions",
+                          maxLines: 3,
+                          validator: (v) =>
+                          v == null || v.isEmpty
+                              ? "Instructions required"
+                              : null,
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        _sectionTitle("Reminder Times"),
+
+                        const SizedBox(height: 10),
+
+                        ...selectedTimes.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final time = entry.value;
+                          final formatted =
+                              "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.sectionBackground,
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: ListTile(
+                              leading: const Icon(Icons.access_time,
+                                  color: AppColors.primary),
+                              title: Text(
+                                formatted,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               trailing: IconButton(
-                                icon: const Icon(Icons.delete),
+                                icon: const Icon(Icons.delete,
+                                    color: AppColors.sosButton),
                                 onPressed: () => removeTime(index),
                               ),
-                            );
-                          }),
-                          if (selectedTimes.length < 6)
-                            ElevatedButton.icon(
+                            ),
+                          );
+                        }),
+
+                        if (selectedTimes.length < 6)
+                          Center(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                  BorderRadius.circular(30),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 25, vertical: 12),
+                              ),
                               onPressed: addTime,
-                              icon: const Icon(Icons.add),
-                              label: const Text("Add Time"),
+                              icon: const Icon(Icons.add,
+                                  color: Colors.white),
+                              label: const Text(
+                                "Add Time",
+                                style:
+                                TextStyle(color: Colors.white),
+                              ),
                             ),
-                        ],
-                      ),
+                          ),
 
-                      const SizedBox(height: 20),
+                        const SizedBox(height: 30),
 
-                      // START DATE
-                      ListTile(
-                        title: Text(
-                          startDate == null
+                        _sectionTitle("Duration"),
+
+                        _buildDateTile(
+                          title: startDate == null
                               ? "Select Start Date"
-                              : DateFormat('yyyy-MM-dd').format(startDate!),
+                              : DateFormat('yyyy-MM-dd')
+                              .format(startDate!),
+                          onTap: () => pickDate(true),
                         ),
-                        trailing: const Icon(Icons.calendar_today),
-                        onTap: () => pickDate(true),
-                      ),
 
-                      // END DATE
-                      ListTile(
-                        title: Text(
-                          endDate == null
+                        const SizedBox(height: 10),
+
+                        _buildDateTile(
+                          title: endDate == null
                               ? "Select End Date (optional)"
-                              : DateFormat('yyyy-MM-dd').format(endDate!),
+                              : DateFormat('yyyy-MM-dd')
+                              .format(endDate!),
+                          onTap: () => pickDate(false),
                         ),
-                        trailing: const Icon(Icons.calendar_today),
-                        onTap: () => pickDate(false),
-                      ),
 
-                      const SizedBox(height: 20),
+                        const SizedBox(height: 30),
 
-                      // REPEAT OPTIONS
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Repeat",
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                        _sectionTitle("Repeat"),
+
+                        RadioListTile(
+                          activeColor: AppColors.primary,
+                          title: const Text("Daily"),
+                          value: "Daily",
+                          groupValue: repeatMode,
+                          onChanged: (v) =>
+                              setState(() => repeatMode = v!),
+                        ),
+                        RadioListTile(
+                          activeColor: AppColors.primary,
+                          title:
+                          const Text("Every Other Day"),
+                          value: "EveryOtherDay",
+                          groupValue: repeatMode,
+                          onChanged: (v) =>
+                              setState(() => repeatMode = v!),
+                        ),
+                        RadioListTile(
+                          activeColor: AppColors.primary,
+                          title:
+                          const Text("Specific Days"),
+                          value: "Custom",
+                          groupValue: repeatMode,
+                          onChanged: (v) =>
+                              setState(() => repeatMode = v!),
+                        ),
+
+                        if (repeatMode == "Custom")
+                          Wrap(
+                            spacing: 8,
+                            children: weekDays.map((day) {
+                              final selected =
+                              selectedDays.contains(day);
+
+                              return FilterChip(
+                                selectedColor:
+                                AppColors.primary,
+                                backgroundColor:
+                                AppColors.sectionBackground,
+                                label: Text(
+                                  day,
+                                  style: TextStyle(
+                                    color: selected
+                                        ? Colors.white
+                                        : AppColors.primaryText,
+                                  ),
+                                ),
+                                selected: selected,
+                                onSelected: (val) {
+                                  setState(() {
+                                    if (val) {
+                                      selectedDays.add(day);
+                                    } else {
+                                      selectedDays.remove(day);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
                           ),
-
-                          RadioListTile(
-                            title: const Text("Daily"),
-                            value: "Daily",
-                            groupValue: repeatMode,
-                            onChanged: (v) =>
-                                setState(() => repeatMode = v!),
-                          ),
-
-                          RadioListTile(
-                            title: const Text("Every Other Day"),
-                            value: "EveryOtherDay",
-                            groupValue: repeatMode,
-                            onChanged: (v) =>
-                                setState(() => repeatMode = v!),
-                          ),
-
-                          RadioListTile(
-                            title: const Text("Specific Days"),
-                            value: "Custom",
-                            groupValue: repeatMode,
-                            onChanged: (v) =>
-                                setState(() => repeatMode = v!),
-                          ),
-
-                          if (repeatMode == "Custom")
-                            Wrap(
-                              spacing: 8,
-                              children: weekDays.map((day) {
-                                final selected =
-                                selectedDays.contains(day);
-
-                                return FilterChip(
-                                  label: Text(day),
-                                  selected: selected,
-                                  onSelected: (val) {
-                                    setState(() {
-                                      if (val) {
-                                        selectedDays.add(day);
-                                      } else {
-                                        selectedDays.remove(day);
-                                      }
-                                    });
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 40),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
 
+            /// BUTTON AREA
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -344,26 +404,124 @@ class _MedicineRemindersScreenState
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: loading ? null : submitMedicine,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(30),
+                        ),
+                        padding:
+                        const EdgeInsets.symmetric(
+                            vertical: 14),
+                      ),
+                      onPressed:
+                      loading ? null : submitMedicine,
                       child: loading
-                          ? const CircularProgressIndicator()
-                          : const Text("Save Medicine"),
+                          ? const CircularProgressIndicator(
+                          color: Colors.white)
+                          : const Text(
+                        "Save Medicine",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight:
+                          FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                            color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(30),
+                        ),
+                        padding:
+                        const EdgeInsets.symmetric(
+                            vertical: 14),
+                      ),
                       onPressed: goToNextPage,
-                      child: const Text("Next"),
+                      child: const Text(
+                        "Next",
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primaryText,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle:
+        const TextStyle(color: AppColors.textShade),
+        filled: true,
+        fillColor: AppColors.sectionBackground,
+        contentPadding:
+        const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateTile({
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.sectionBackground,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.calendar_today,
+            color: AppColors.primary),
+        title: Text(
+          title,
+          style: const TextStyle(
+              fontWeight: FontWeight.w500),
+        ),
+        onTap: onTap,
       ),
     );
   }
