@@ -61,9 +61,14 @@ class SetupCompletePage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Navigate to Dashboard and clear navigation stack
-                    Navigator.pushNamedAndRemoveUntil(context, '../dashboard/main_navigation_screen.dart', (route) => false);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MainNavigationScreen(),
+                      ),
+                    );
                   },
+
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
