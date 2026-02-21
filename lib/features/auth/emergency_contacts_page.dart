@@ -15,13 +15,15 @@ class EmergencyContactsPage extends StatefulWidget {
 }
 
 class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
+  // --- NEW: Add a key to force refresh ---
+  Key _futureKey = UniqueKey();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.mainBackground,
       body: CustomScrollView(
         slivers: [
-          // Samsung One UI style large header
           SliverAppBar(
             expandedHeight: 180.0,
             floating: false,
@@ -50,17 +52,17 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
               ),
             ),
           ),
-
-          // Contact List Body
           SliverFillRemaining(
             hasScrollBody: true,
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
+              clipBehavior: Clip.antiAlias, // <-- Add this to clip the list
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(28), // Large rounded Samsung style
+                borderRadius: BorderRadius.circular(28),
               ),
               child: FutureBuilder<List<ContactModel>>(
+                key: _futureKey, // <-- Use the key here
                 future: AuthService.getEmergencyContacts(widget.elderId),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -69,7 +71,7 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
                     return Center(child: Text("Error: ${snapshot.error.toString()}"));
                   }
 
-                  final contacts = snapshot.data ?? [];
+                  var contacts = snapshot.data ?? [];
 
                   if (contacts.isEmpty) {
                     return const Center(
@@ -77,6 +79,13 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
                           style: TextStyle(color: AppColors.descriptionText)),
                     );
                   }
+
+                  // --- NEW: Sort list to show primary contact first ---
+                  contacts.sort((a, b) {
+                    if (b.isPrimary) return 1;
+                    if (a.isPrimary) return -1;
+                    return a.name.compareTo(b.name); // Keep alphabetical order otherwise
+                  });
 
                   return ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -103,7 +112,10 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17)),
                         subtitle: Text('${contact.relation} • ${contact.phone}',
                             style: const TextStyle(color: AppColors.descriptionText)),
-                        trailing: const Icon(Icons.info_outline, color: AppColors.descriptionText, size: 20),
+                        // --- NEW: Show a star for the primary contact ---
+                        trailing: contact.isPrimary
+                            ? const Icon(Icons.star_rounded, color: AppColors.primary, size: 24)
+                            : null,
                       );
                     },
                   );
@@ -111,13 +123,9 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
               ),
             ),
           ),
-
-          // Spacer for button
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
-
-      // Floating Action Button moved to bottom with Samsung style padding
       bottomNavigationBar: _buildBottomActions(),
     );
   }
@@ -137,7 +145,12 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
                   context,
                   MaterialPageRoute(builder: (context) => AddContactPage(elderId: widget.elderId)),
                 );
-                if (result == true) setState(() {});
+                if (result == true) {
+                  // --- NEW: Refresh the FutureBuilder ---
+                  setState(() {
+                    _futureKey = UniqueKey();
+                  });
+                }
               },
               icon: const Icon(Icons.add),
               label: const Text("Add Contact"),

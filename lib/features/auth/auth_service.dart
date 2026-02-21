@@ -2,40 +2,32 @@ import 'package:dio/dio.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/session/session_manager.dart';
-import 'contact_model.dart'; // Import the contact model
+import 'contact_model.dart';
 
 class AuthService {
   static final Dio _dio = DioClient.dio;
 
-  // ================= DEVICE MODEL =================
   static Future<String> _getDeviceModel() async {
     final deviceInfo = DeviceInfoPlugin();
     final androidInfo = await deviceInfo.androidInfo;
     return androidInfo.model ?? "unknown";
   }
 
-  // ================= ERROR HANDLER (RESTORED) =================
   static Exception _handleError(DioException e) {
     final responseData = e.response?.data;
-
     if (responseData != null && responseData["detail"] != null) {
       if (responseData["detail"] is List) {
         final error = responseData["detail"][0];
+        final field = error["loc"][1];
         final message = error["msg"];
-        if (error["loc"] is List && error["loc"].length > 1) {
-          final field = error["loc"][1];
-          return Exception('$field: $message');
-        }
-        return Exception(message);
+        return Exception('$field: $message');
       } else {
         return Exception(responseData["detail"].toString());
       }
     }
-
     return Exception("Request failed");
   }
 
-  // ================= REGISTER =================
   static Future<int> registerCaregiver({
     required String fullName,
     required String email,
@@ -48,9 +40,7 @@ class AuthService {
     try {
       const fcmToken = "dummy_fcm_token";
       const appType = "android";
-
       final deviceModel = await _getDeviceModel();
-
       final response = await _dio.post(
         "/api/v1/caregiver/auth/register",
         data: {
@@ -66,16 +56,13 @@ class AuthService {
           "device_model": deviceModel,
         },
       );
-
       await SessionManager.saveFCMToken(fcmToken);
-
       return response.data["user_id"];
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  // ================= LOGIN =================
   static Future<Map<String, dynamic>> loginCaregiver({
     required String email,
     required String password,
@@ -83,9 +70,7 @@ class AuthService {
     try {
       const fcmToken = "dummy_fcm_token";
       const appType = "android";
-
       final deviceModel = await _getDeviceModel();
-
       final response = await _dio.post(
         "/api/v1/caregiver/auth/login",
         data: {
@@ -96,16 +81,13 @@ class AuthService {
           "device_model": deviceModel,
         },
       );
-
       await SessionManager.saveFCMToken(fcmToken);
-
       return response.data;
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  // ================= CREATE ELDER =================
   static Future<Map<String, dynamic>> createElder({
     required String fullName,
     required String email,
@@ -134,20 +116,18 @@ class AuthService {
           "is_primary": isPrimary,
         },
       );
-
       return response.data;
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  // ================= EMERGENCY CONTACTS (RESTORED) =================
-
   static Future<void> createEmergencyContact({
     required int elderId,
     required String name,
     required String phone,
     required String relation,
+    required bool isPrimary,
   }) async {
     try {
       await _dio.post(
@@ -157,6 +137,7 @@ class AuthService {
           "contact_name": name,
           "phone": phone,
           "relationship": relation,
+          "is_primary": isPrimary,
         },
       );
     } on DioException catch (e) {

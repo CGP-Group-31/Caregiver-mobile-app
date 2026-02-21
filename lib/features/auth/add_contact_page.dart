@@ -17,6 +17,7 @@ class _AddContactPageState extends State<AddContactPage> {
   final _phoneController = TextEditingController();
   final _relationController = TextEditingController();
   bool _isLoading = false;
+  bool _isPrimary = false;
 
   Future<void> _onSave() async {
     if (!_formKey.currentState!.validate()) return;
@@ -27,6 +28,7 @@ class _AddContactPageState extends State<AddContactPage> {
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
         relation: _relationController.text.trim(),
+        isPrimary: _isPrimary, // <-- Pass the value
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -48,7 +50,6 @@ class _AddContactPageState extends State<AddContactPage> {
         backgroundColor: AppColors.mainBackground,
         elevation: 0,
         centerTitle: true,
-        // FIX: Increase leadingWidth to prevent text wrapping
         leadingWidth: 100,
         leading: TextButton(
           onPressed: () => Navigator.pop(context),
@@ -95,13 +96,12 @@ class _AddContactPageState extends State<AddContactPage> {
         ],
       ),
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(), // Added for Samsung feel
+        physics: const BouncingScrollPhysics(),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
               const SizedBox(height: 30),
-              // Profile Placeholder
               Center(
                 child: Container(
                   height: 100,
@@ -121,8 +121,6 @@ class _AddContactPageState extends State<AddContactPage> {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // Input Fields Container
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
@@ -159,6 +157,26 @@ class _AddContactPageState extends State<AddContactPage> {
                 ),
               ),
               const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: SwitchListTile(
+                    title: const Text('Set as primary contact', style: TextStyle(fontWeight: FontWeight.w500)),
+                    value: _isPrimary,
+                    onChanged: (bool value) {
+                      setState(() {
+                        _isPrimary = value;
+                      });
+                    },
+                    activeColor: AppColors.primary,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
