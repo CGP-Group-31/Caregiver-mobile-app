@@ -55,7 +55,7 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-            builder: (_) => const MedicalDetailsScreen()),
+            builder: (_) => MedicalDetailsScreen(elderId: elderId)),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

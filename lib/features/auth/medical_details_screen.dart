@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'medicine_reminders_screen.dart';
 
 class MedicalDetailsScreen extends StatefulWidget {
-  const MedicalDetailsScreen({super.key});
+  final int elderId;
+  const MedicalDetailsScreen({super.key, required this.elderId});
 
   @override
   State<MedicalDetailsScreen> createState() => _MedicalDetailsScreenState();
@@ -64,7 +65,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
           : null,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: cGrey2.withValues(alpha: 0.35), width: 1),
+        borderSide: BorderSide(color: cGrey2.withOpacity(0.35), width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -97,7 +98,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: filled ? cTextDark : cGrey2.withValues(alpha: 0.35),
+            color: filled ? cTextDark : cGrey2.withOpacity(0.35),
           ),
         );
       }),
@@ -125,7 +126,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const MedicineRemindersScreen()),
+      MaterialPageRoute(builder: (_) => MedicineRemindersScreen(elderId: widget.elderId)),
     );
 
     setState(() => loading = false);
@@ -154,16 +155,16 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: cMint.withValues(alpha: 0.35),
+                      color: cMint.withOpacity(0.35),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: cGrey2.withValues(alpha: 0.35)),
+                      border: Border.all(color: cGrey2.withOpacity(0.35)),
                     ),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         children: [
                           DropdownButtonFormField<String>(
-                            initialValue: bloodType,
+                            value: bloodType,
                             items: bloodTypes
                                 .map(
                                   (b) => DropdownMenuItem(
@@ -300,4 +301,3 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
     );
   }
 }
-

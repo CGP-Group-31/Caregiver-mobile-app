@@ -1,7 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import '../../../core/network/dio_client.dart';
-import '../../../core/session/session_manager.dart';
+import '../../core/network/dio_client.dart';
+import '../../core/session/session_manager.dart';
+import 'contact_model.dart'; // Import the contact model
 
 class AuthService {
   static final Dio _dio = DioClient.dio;
@@ -13,7 +14,7 @@ class AuthService {
     return androidInfo.model ?? "unknown";
   }
 
-  // ================= ERROR HANDLER =================
+  // ================= ERROR HANDLER (RESTORED) =================
   static Exception _handleError(DioException e) {
     final responseData = e.response?.data;
 
@@ -21,6 +22,10 @@ class AuthService {
       if (responseData["detail"] is List) {
         final error = responseData["detail"][0];
         final message = error["msg"];
+        if (error["loc"] is List && error["loc"].length > 1) {
+          final field = error["loc"][1];
+          return Exception('$field: $message');
+        }
         return Exception(message);
       } else {
         return Exception(responseData["detail"].toString());
@@ -131,6 +136,41 @@ class AuthService {
       );
 
       return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // ================= EMERGENCY CONTACTS (RESTORED) =================
+
+  static Future<void> createEmergencyContact({
+    required int elderId,
+    required String name,
+    required String phone,
+    required String relation,
+  }) async {
+    try {
+      await _dio.post(
+        "/api/v1/caregiver/elder-create/emergency-contacts",
+        data: {
+          "elder_id": elderId,
+          "contact_name": name,
+          "phone": phone,
+          "relationship": relation,
+        },
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  static Future<List<ContactModel>> getEmergencyContacts(int elderId) async {
+    try {
+      final response = await _dio.get(
+        "/api/v1/caregiver/elder-create/get-emergency-contacts/$elderId",
+      );
+      final List<dynamic> data = response.data;
+      return data.map((json) => ContactModel.fromJson(json)).toList();
     } on DioException catch (e) {
       throw _handleError(e);
     }

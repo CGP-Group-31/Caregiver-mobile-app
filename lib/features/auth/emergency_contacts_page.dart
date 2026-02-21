@@ -1,139 +1,173 @@
 import 'package:flutter/material.dart';
 import 'contact_model.dart';
+import 'auth_service.dart';
 import 'theme.dart';
 import 'add_contact_page.dart';
 import 'setup_complete_page.dart';
 
-class EmergencyContactsPage extends StatelessWidget {
-  const EmergencyContactsPage({super.key});
+class EmergencyContactsPage extends StatefulWidget {
+  final int elderId;
+
+  const EmergencyContactsPage({super.key, required this.elderId});
 
   @override
-  Widget build(BuildContext context) {
-    List<ContactModel> dummyContacts = [
-      ContactModel(name: "John Doe", phone: "0711234567", relation: "Son"),
-      ContactModel(name: "Dr. Smith", phone: "0779876543", relation: "Doctor"),
-    ];
+  State<EmergencyContactsPage> createState() => _EmergencyContactsPageState();
+}
 
+class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.mainBackground,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          "Emergency Contacts",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 25),
-            // #243333 Primary Text Color
-            const Text(
-              "Your trusted contacts",
-              style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText
+      body: CustomScrollView(
+        slivers: [
+          // Samsung One UI style large header
+          SliverAppBar(
+            expandedHeight: 180.0,
+            floating: false,
+            pinned: true,
+            backgroundColor: AppColors.mainBackground,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: true,
+              title: const Text(
+                "Emergency Contacts",
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                ),
+              ),
+              background: Container(
+                color: AppColors.mainBackground,
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.contact_phone_outlined, size: 50, color: AppColors.primary),
+                    SizedBox(height: 10),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 20),
+          ),
 
-            // Samsung Grouped Container using #F6F7F3
-            Container(
+          // Contact List Body
+          SliverFillRemaining(
+            hasScrollBody: true,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: AppColors.containerBackground, // #F6F7F3
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: AppColors.sectionSeparator, width: 1), // #BEE8DA
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28), // Large rounded Samsung style
               ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: dummyContacts.length,
-                // Divider using #BEE8DA
-                separatorBuilder: (context, index) => const Divider(
-                  height: 1,
-                  indent: 75,
-                  endIndent: 20,
-                  color: AppColors.sectionSeparator,
-                ),
-                itemBuilder: (context, index) {
-                  final contact = dummyContacts[index];
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    leading: CircleAvatar(
-                      // Soft background using separator color
-                      backgroundColor: AppColors.sectionSeparator,
-                      radius: 25,
-                      child: Text(
-                        contact.name[0],
-                        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                    ),
-                    title: Text(contact.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryText)),
-                    // #6F7F7D for description
-                    subtitle: Text("${contact.relation} • ${contact.phone}",
-                        style: const TextStyle(color: AppColors.descriptionText, fontSize: 14)),
-                    trailing: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.mainBackground,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.call, color: AppColors.primary, size: 22),
-                        onPressed: () {},
-                      ),
-                    ),
+              child: FutureBuilder<List<ContactModel>>(
+                future: AuthService.getEmergencyContacts(widget.elderId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text("Error: ${snapshot.error.toString()}"));
+                  }
+
+                  final contacts = snapshot.data ?? [];
+
+                  if (contacts.isEmpty) {
+                    return const Center(
+                      child: Text("No contacts added yet.",
+                          style: TextStyle(color: AppColors.descriptionText)),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    itemCount: contacts.length,
+                    separatorBuilder: (context, index) =>
+                    const Divider(indent: 70, endIndent: 20, height: 1),
+                    itemBuilder: (context, index) {
+                      final contact = contacts[index];
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                        leading: CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColors.primary.withOpacity(0.1),
+                          child: Text(
+                            contact.name.isNotEmpty ? contact.name[0].toUpperCase() : '#',
+                            style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18
+                            ),
+                          ),
+                        ),
+                        title: Text(contact.name,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17)),
+                        subtitle: Text('${contact.relation} • ${contact.phone}',
+                            style: const TextStyle(color: AppColors.descriptionText)),
+                        trailing: const Icon(Icons.info_outline, color: AppColors.descriptionText, size: 20),
+                      );
+                    },
                   );
                 },
               ),
             ),
+          ),
 
-            const Spacer(),
+          // Spacer for button
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
 
-            // Add Contact - Using Section Separator color for button background if needed
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AddContactPage())),
-                icon: const Icon(Icons.person_add_alt_1),
-                label: const Text("Add New Contact"),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.primary, width: 1.5),
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                ),
+      // Floating Action Button moved to bottom with Samsung style padding
+      bottomNavigationBar: _buildBottomActions(),
+    );
+  }
+
+  Widget _buildBottomActions() {
+    return Container(
+      color: AppColors.mainBackground,
+      padding: const EdgeInsets.fromLTRB(24, 10, 24, 30),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AddContactPage(elderId: widget.elderId)),
+                );
+                if (result == true) setState(() {});
+              },
+              icon: const Icon(Icons.add),
+              label: const Text("Add Contact"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               ),
             ),
-            const SizedBox(height: 12),
-
-            // Continue - Using #2E7D7A Main Action Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SetupCompletePage())),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                ),
-                child: const Text("Continue", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SetupCompletePage()),
               ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                elevation: 0,
+              ),
+              child: const Text("Finish Setup", style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
             ),
-            const SizedBox(height: 30),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

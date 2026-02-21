@@ -6,7 +6,8 @@ import 'emergency_contacts_page.dart';
 import 'theme.dart';
 
 class MedicineRemindersScreen extends StatefulWidget {
-  const MedicineRemindersScreen({super.key});
+  final int elderId;
+  const MedicineRemindersScreen({super.key, required this.elderId});
 
   @override
   State<MedicineRemindersScreen> createState() =>
@@ -123,7 +124,6 @@ class _MedicineRemindersScreenState
 
     try {
       final caregiverId = await SessionManager.getUserId();
-      final elderId = await SessionManager.getElderId();
 
       final startDateFormatted =
       DateFormat('yyyy-MM-dd').format(startDate!);
@@ -133,7 +133,7 @@ class _MedicineRemindersScreenState
           : DateFormat('yyyy-MM-dd').format(endDate!);
 
       await MedicineService.createMedicine(
-        elderId: elderId!,
+        elderId: widget.elderId,
         caregiverId: caregiverId!,
         name: nameCtrl.text.trim(),
         dosage: dosageCtrl.text.trim(),
@@ -162,7 +162,7 @@ class _MedicineRemindersScreenState
   void goToNextPage() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const EmergencyContactsPage()),
+      MaterialPageRoute(builder: (_) => EmergencyContactsPage(elderId: widget.elderId)),
     );
   }
 
