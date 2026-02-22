@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'medicine_reminders_screen.dart';
+import 'doctor_service.dart';
 
 class MedicalDetailsScreen extends StatefulWidget {
   final int elderId;
-  const MedicalDetailsScreen({super.key, required this.elderId});
+
+  const MedicalDetailsScreen({
+    super.key,
+    required this.elderId,
+  });
 
   @override
   State<MedicalDetailsScreen> createState() => _MedicalDetailsScreenState();
@@ -27,7 +32,10 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
   final chronicCtrl = TextEditingController();
   final notesCtrl = TextEditingController();
   final surgeriesCtrl = TextEditingController();
+
+  // Preferred doctor (opens search page)
   final preferredDoctorCtrl = TextEditingController();
+  DoctorItem? selectedDoctor;
 
   bool loading = false;
 
@@ -53,19 +61,17 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
     super.dispose();
   }
 
-  InputDecoration _decor(String hint, {bool showArrow = false}) {
+  InputDecoration _decor(String hint, {Widget? suffix}) {
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: cGrey1, fontWeight: FontWeight.w500),
       filled: true,
       fillColor: cSurface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      suffixIcon: showArrow
-          ? const Icon(Icons.chevron_right_rounded, color: cGrey2)
-          : null,
+      suffixIcon: suffix,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: cGrey2.withOpacity(0.35), width: 1),
+        borderSide: BorderSide(color: cGrey2.withValues(alpha: 0.35), width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -83,8 +89,6 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
   }
 
   Widget _stepDots() {
-    // medical details is step 2 in your wireframe dots example
-    // We'll show 6 dots with first 2 filled.
     const int total = 6;
     const int active = 2;
 
@@ -98,7 +102,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: filled ? cTextDark : cGrey2.withOpacity(0.35),
+            color: filled ? cTextDark : cGrey2.withValues(alpha: 0.35),
           ),
         );
       }),
@@ -111,22 +115,55 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
     return null;
   }
 
+  Future<void> _openDoctorSearch() async {
+    FocusScope.of(context).unfocus();
+
+    final picked = await showSearch<DoctorItem?>(
+      context: context,
+      delegate: DoctorSearchDelegate(
+        primary: cPrimary,
+        surface: cSurface,
+        textDark: cTextDark,
+        grey1: cGrey1,
+        grey2: cGrey2,
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (picked != null) {
+      setState(() {
+        selectedDoctor = picked;
+        preferredDoctorCtrl.text = picked.fullName;
+      });
+    }
+  }
+
   Future<void> _continue() async {
     FocusScope.of(context).unfocus();
 
     final valid = _formKey.currentState?.validate() ?? false;
     if (!valid) return;
 
+    if (selectedDoctor == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select a doctor")),
+      );
+      return;
+    }
+
     setState(() => loading = true);
 
-    // Front-end only for now
-    await Future.delayed(const Duration(milliseconds: 500));
+    // small UX pause (optional)
+    await Future.delayed(const Duration(milliseconds: 250));
 
     if (!mounted) return;
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => MedicineRemindersScreen(elderId: widget.elderId)),
+      MaterialPageRoute(
+        builder: (_) => MedicineRemindersScreen(elderId: widget.elderId),
+      ),
     );
 
     setState(() => loading = false);
@@ -155,16 +192,16 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: cMint.withOpacity(0.35),
+                      color: cMint.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: cGrey2.withOpacity(0.35)),
+                      border: Border.all(color: cGrey2.withValues(alpha: 0.35)),
                     ),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         children: [
                           DropdownButtonFormField<String>(
-                            value: bloodType,
+                            initialValue: bloodType,
                             items: bloodTypes
                                 .map(
                                   (b) => DropdownMenuItem(
@@ -180,7 +217,11 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                             )
                                 .toList(),
                             onChanged: (v) => setState(() => bloodType = v),
-                            decoration: _decor("Blood Type...", showArrow: true),
+                            decoration: _decor(
+                              "Blood Type...",
+                              suffix: const Icon(Icons.chevron_right_rounded,
+                                  color: cGrey2),
+                            ),
                             dropdownColor: cSurface,
                             validator: (v) {
                               if (v == null || v.isEmpty) {
@@ -240,16 +281,30 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                           ),
                           const SizedBox(height: 12),
 
+                          // Preferred Doctor (tap to open new search page)
                           TextFormField(
                             controller: preferredDoctorCtrl,
-                            decoration:
-                            _decor("Preferred Doctor", showArrow: true),
+                            readOnly: true,
+                            onTap: _openDoctorSearch,
+                            decoration: _decor(
+                              "Preferred Doctor",
+                              suffix:
+                              const Icon(Icons.search_rounded, color: cGrey2),
+                            ),
                             style: const TextStyle(
                               color: cTextDark,
                               fontWeight: FontWeight.w600,
                             ),
-                            validator: (v) =>
-                                _optionalMax(v, 80, "Preferred Doctor"),
+                            validator: (v) {
+                              final err =
+                              _optionalMax(v, 80, "Preferred Doctor");
+                              if (err != null) return err;
+
+                              if (selectedDoctor == null) {
+                                return "Please select a doctor";
+                              }
+                              return null;
+                            },
                           ),
 
                           const SizedBox(height: 18),
@@ -296,6 +351,307 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ✅ Search page (nicer UI + searches only doctor name)
+class DoctorSearchDelegate extends SearchDelegate<DoctorItem?> {
+  DoctorSearchDelegate({
+    required this.primary,
+    required this.surface,
+    required this.textDark,
+    required this.grey1,
+    required this.grey2,
+  });
+
+  final Color primary;
+  final Color surface;
+  final Color textDark;
+  final Color grey1;
+  final Color grey2;
+
+  @override
+  String get searchFieldLabel => "Search doctor name";
+
+  @override
+  TextStyle? get searchFieldStyle =>
+      const TextStyle(color: Colors.white, fontWeight: FontWeight.w600);
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    final base = Theme.of(context);
+    return base.copyWith(
+      scaffoldBackgroundColor: surface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: Colors.white,
+        selectionColor: Color(0x55FFFFFF),
+        selectionHandleColor: Colors.white,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+        border: InputBorder.none,
+      ),
+    );
+  }
+
+  @override
+  List<Widget>? buildActions(BuildContext context) => [
+    if (query.isNotEmpty)
+      IconButton(
+        icon: const Icon(Icons.clear_rounded),
+        onPressed: () => query = "",
+      ),
+  ];
+
+  @override
+  Widget? buildLeading(BuildContext context) => IconButton(
+    icon: const Icon(Icons.arrow_back_rounded),
+    onPressed: () => close(context, null),
+  );
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _DoctorResultsNice(
+      query: query,
+      surface: surface,
+      textDark: textDark,
+      grey1: grey1,
+      primary: primary,
+      onPick: (d) => close(context, d),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _DoctorResultsNice(
+      query: query,
+      surface: surface,
+      textDark: textDark,
+      grey1: grey1,
+      primary: primary,
+      onPick: (d) => close(context, d),
+    );
+  }
+}
+
+class _DoctorResultsNice extends StatelessWidget {
+  const _DoctorResultsNice({
+    required this.query,
+    required this.surface,
+    required this.textDark,
+    required this.grey1,
+    required this.primary,
+    required this.onPick,
+  });
+
+  final String query;
+  final Color surface;
+  final Color textDark;
+  final Color grey1;
+  final Color primary;
+  final void Function(DoctorItem doctor) onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final q = query.trim();
+
+    if (q.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+            decoration: BoxDecoration(
+              color: primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  size: 40,
+                  color: primary.withValues(alpha: 0.9),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Start typing a doctor's name",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textDark,
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Results will appear here as you type.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textDark.withValues(alpha: 0.65),
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return FutureBuilder<List<DoctorItem>>(
+      future: DoctorService.searchDoctors(
+        doctorName: q,
+        hospital: "", // ✅ only doctor_name search
+      ),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snap.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                "Something went wrong.\n${snap.error}",
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+
+        final list = snap.data ?? [];
+
+        if (list.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: grey1.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  "No doctors found for \"$q\"",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textDark.withValues(alpha: 0.75),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          itemCount: list.length,
+          itemBuilder: (context, i) {
+            final d = list[i];
+
+            final spec = d.specialization.trim().isEmpty
+                ? "Doctor"
+                : d.specialization.trim();
+
+            final hospital = d.hospital.trim();
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Material(
+                color: surface,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => onPick(d),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: grey1.withValues(alpha: 0.18)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            Icons.medical_services_rounded,
+                            color: primary.withValues(alpha: 0.95),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                d.fullName,
+                                style: TextStyle(
+                                  color: textDark,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15.5,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  _chip(spec, isPrimary: true),
+                                  if (hospital.isNotEmpty)
+                                    _chip(hospital, isPrimary: false),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Icon(Icons.chevron_right_rounded,
+                            color: textDark.withValues(alpha: 0.55)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _chip(String text, {required bool isPrimary}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: isPrimary
+            ? primary.withValues(alpha: 0.12)
+            : grey1.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: isPrimary ? primary : textDark,
+          fontWeight: FontWeight.w700,
+          fontSize: 12.5,
         ),
       ),
     );
