@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../auth/theme.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -10,7 +11,11 @@ class MessagesScreen extends StatefulWidget {
 class _MessagesScreenState extends State<MessagesScreen> {
 
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, dynamic>> messages = [];
+
+  List<Map<String, dynamic>> messages = [
+    {"text": "Did you take medicine?", "isMe": true},
+    {"text": "Yes, I took it.", "isMe": false},
+  ];
 
   void sendMessage() {
     if (_controller.text.isEmpty) return;
@@ -19,77 +24,114 @@ class _MessagesScreenState extends State<MessagesScreen> {
       messages.add({
         "text": _controller.text,
         "isMe": true,
-        "time": TimeOfDay.now().format(context),
       });
     });
 
     _controller.clear();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
+  Widget chatBubble(Map<String, dynamic> msg) {
+    final bool isMe = msg['isMe'];
 
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(10),
-          color: Colors.blue.shade50,
-          child: const Text(
-            "Elder: Nimal Perera (Father)",
-            textAlign: TextAlign.center,
+    return Align(
+      alignment:
+      isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.all(12),
+        constraints: const BoxConstraints(maxWidth: 260),
+        decoration: BoxDecoration(
+          color: isMe
+              ? AppColors.primary
+              : AppColors.containerBackground,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          msg['text'],
+          style: TextStyle(
+            color: isMe
+                ? Colors.white
+                : AppColors.primaryText,
           ),
         ),
+      ),
+    );
+  }
 
-        Expanded(
-          child: ListView.builder(
-            itemCount: messages.length,
-            itemBuilder: (context, index) {
-              final msg = messages[index];
-              return Align(
-                alignment: msg['isMe']
-                    ? Alignment.centerRight
-                    : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: msg['isMe']
-                        ? Colors.blue
-                        : Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Text(
-                    msg['text'],
-                    style: TextStyle(
-                      color: msg['isMe']
-                          ? Colors.white
-                          : Colors.black,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.mainBackground,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          "Messages",
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+      body: Column(
+        children: [
+
+          // Elder Info Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            color: AppColors.sectionBackground,
+            child: const Text(
+              "Nimal Perera (Father)",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.primaryText,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: messages.length,
+              itemBuilder: (context, index) =>
+                  chatBubble(messages[index]),
+            ),
+          ),
+
+          // Input Bar
+          Container(
+            padding: const EdgeInsets.all(10),
+            color: AppColors.sectionBackground,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      hintText: "Type a message...",
+                      filled: true,
+                      fillColor: AppColors.containerBackground,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
-              );
-            },
-          ),
-        ),
-
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                decoration: const InputDecoration(
-                  hintText: "Type message...",
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  backgroundColor: AppColors.primary,
+                  child: IconButton(
+                    icon: const Icon(Icons.send,
+                        color: Colors.white),
+                    onPressed: sendMessage,
+                  ),
                 ),
-              ),
+              ],
             ),
-            IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: sendMessage,
-            )
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
