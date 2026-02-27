@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+
 import 'medicine_reminders_screen.dart';
 import 'doctor_service.dart';
+import '../../../core/network/dio_client.dart'; // adjust if your path differs
 
 class MedicalDetailsScreen extends StatefulWidget {
   final int elderId;
@@ -15,7 +18,7 @@ class MedicalDetailsScreen extends StatefulWidget {
 }
 
 class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
-  // ---- Color palette (NOT using last 3 colors) ----
+
   static const Color cPrimary = Color(0xFF2E7D7A); // teal
   static const Color cBg = Color(0xFFD6EFE6); // light mint background
   static const Color cMint = Color(0xFFBEE8DA); // mint
@@ -33,7 +36,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
   final notesCtrl = TextEditingController();
   final surgeriesCtrl = TextEditingController();
 
-  // Preferred doctor (opens search page)
+
   final preferredDoctorCtrl = TextEditingController();
   DoctorItem? selectedDoctor;
 
@@ -139,6 +142,52 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
     }
   }
 
+  // API CALL
+  Future<void> _submitMedicalDetailsToApi() async {
+    final dio = DioClient.dio;
+    final payload = {
+      "elder_id": widget.elderId,
+      "blood_type": bloodType ?? "",
+      "allergies": allergiesCtrl.text.trim(),
+      "chronic_conditions": chronicCtrl.text.trim(),
+      "emergency_notes": notesCtrl.text.trim(),
+      "past_surgeries": surgeriesCtrl.text.trim(),
+      "preferred_doctor_id": selectedDoctor?.doctorId ?? 0,
+    };
+
+    try {
+
+      final res = await dio.post(
+        "/api/v1/caregiver/elder-create/elder-profile",
+        data: payload,
+      );
+
+      // If backend returns 200/201 etc, treat as success
+      final ok = res.statusCode != null && res.statusCode! >= 200 && res.statusCode! < 300;
+      if (!ok) {
+        throw Exception("Failed with status: ${res.statusCode}");
+      }
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      final data = e.response?.data;
+
+      if (status == 422) {
+        throw Exception("Please check the details you entered (validation error).");
+      } else if (status == 404) {
+
+        throw Exception(data is Map && data["detail"] != null
+            ? data["detail"].toString()
+            : "Resource not found.");
+      } else if (status == 500) {
+        throw Exception("Server error. Please try again.");
+      } else {
+        throw Exception(
+          data is Map && data["detail"] != null ? data["detail"].toString() : "Something went wrong.",
+        );
+      }
+    }
+  }
+
   Future<void> _continue() async {
     FocusScope.of(context).unfocus();
 
@@ -154,19 +203,26 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
 
     setState(() => loading = true);
 
-    // small UX pause (optional)
-    await Future.delayed(const Duration(milliseconds: 250));
+    try {
 
-    if (!mounted) return;
+      await _submitMedicalDetailsToApi();
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MedicineRemindersScreen(elderId: widget.elderId),
-      ),
-    );
+      if (!mounted) return;
 
-    setState(() => loading = false);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MedicineRemindersScreen(elderId: widget.elderId),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+      );
+    }
+
+    if (mounted) setState(() => loading = false);
   }
 
   @override
@@ -281,15 +337,14 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                           ),
                           const SizedBox(height: 12),
 
-                          // Preferred Doctor (tap to open new search page)
                           TextFormField(
                             controller: preferredDoctorCtrl,
                             readOnly: true,
                             onTap: _openDoctorSearch,
                             decoration: _decor(
                               "Preferred Doctor",
-                              suffix:
-                              const Icon(Icons.search_rounded, color: cGrey2),
+                              suffix: const Icon(Icons.search_rounded,
+                                  color: cGrey2),
                             ),
                             style: const TextStyle(
                               color: cTextDark,
@@ -357,7 +412,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
   }
 }
 
-/// ✅ Search page (nicer UI + searches only doctor name)
+
 class DoctorSearchDelegate extends SearchDelegate<DoctorItem?> {
   DoctorSearchDelegate({
     required this.primary,
@@ -511,7 +566,7 @@ class _DoctorResultsNice extends StatelessWidget {
     return FutureBuilder<List<DoctorItem>>(
       future: DoctorService.searchDoctors(
         doctorName: q,
-        hospital: "", // ✅ only doctor_name search
+        hospital: "",
       ),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
@@ -561,11 +616,9 @@ class _DoctorResultsNice extends StatelessWidget {
           itemCount: list.length,
           itemBuilder: (context, i) {
             final d = list[i];
-
             final spec = d.specialization.trim().isEmpty
                 ? "Doctor"
                 : d.specialization.trim();
-
             final hospital = d.hospital.trim();
 
             return Padding(
@@ -614,9 +667,9 @@ class _DoctorResultsNice extends StatelessWidget {
                                 spacing: 8,
                                 runSpacing: 6,
                                 children: [
-                                  _chip(spec, isPrimary: true),
+                                  _chip(spec, isPrimary: true, textDark: textDark),
                                   if (hospital.isNotEmpty)
-                                    _chip(hospital, isPrimary: false),
+                                    _chip(hospital, isPrimary: false, textDark: textDark),
                                 ],
                               ),
                             ],
@@ -637,7 +690,7 @@ class _DoctorResultsNice extends StatelessWidget {
     );
   }
 
-  Widget _chip(String text, {required bool isPrimary}) {
+  Widget _chip(String text, {required bool isPrimary, required Color textDark}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
