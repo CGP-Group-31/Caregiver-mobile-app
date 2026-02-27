@@ -3,7 +3,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/session/session_manager.dart';
 import 'contact_model.dart';
-
+import '../../core/notifications/fcm_manager.dart';
 class AuthService {
   static final Dio _dio = DioClient.dio;
 
@@ -27,7 +27,6 @@ class AuthService {
     }
     return Exception("Request failed");
   }
-
   static Future<int> registerCaregiver({
     required String fullName,
     required String email,
@@ -38,9 +37,10 @@ class AuthService {
     required String address,
   }) async {
     try {
-      const fcmToken = "dummy_fcm_token";
-      const appType = "android";
+      final fcmToken = await FCMManager.initAndGetToken();
+      const appType = "caregiver";
       final deviceModel = await _getDeviceModel();
+
       final response = await _dio.post(
         "/api/v1/caregiver/auth/register",
         data: {
@@ -51,12 +51,13 @@ class AuthService {
           "date_of_birth": dateOfBirth,
           "gender": gender,
           "address": address,
-          "fcm_token": fcmToken,
+          "fcm_token": fcmToken ?? "",
           "app_type": appType,
           "device_model": deviceModel,
         },
       );
-      await SessionManager.saveFCMToken(fcmToken);
+
+      // token already saved inside FCMManager
       return response.data["user_id"];
     } on DioException catch (e) {
       throw _handleError(e);
@@ -68,20 +69,21 @@ class AuthService {
     required String password,
   }) async {
     try {
-      const fcmToken = "dummy_fcm_token";
-      const appType = "android";
+      final fcmToken = await FCMManager.initAndGetToken();
+      const appType = "caregiver";
       final deviceModel = await _getDeviceModel();
+
       final response = await _dio.post(
         "/api/v1/caregiver/auth/login",
         data: {
           "email": email,
           "password": password,
-          "fcm_token": fcmToken,
+          "fcm_token": fcmToken ?? "",
           "app_type": appType,
           "device_model": deviceModel,
         },
       );
-      await SessionManager.saveFCMToken(fcmToken);
+
       return response.data;
     } on DioException catch (e) {
       throw _handleError(e);
