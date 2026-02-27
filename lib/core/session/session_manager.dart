@@ -1,45 +1,131 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SessionManager {
-  static const _storage = FlutterSecureStorage();
+  SessionManager._();
 
-  static const _userId = "user_id"; // caregiver id
-  static const _elderId = "elder_id";
-  static const _relationshipId = "relationship_id";
-  static const _loggedIn = "logged_in";
-  static const _fcmToken = "fcm_token";
+  /// ✅ Stronger Android secure storage (EncryptedSharedPreferences)
+  static const AndroidOptions _androidOptions = AndroidOptions(
+    encryptedSharedPreferences: true,
+  );
 
-  static Future<void> saveUser(int userId) async {
-    await _storage.write(key: _userId, value: userId.toString());
-    await _storage.write(key: _loggedIn, value: "true");
-  }
+  static const FlutterSecureStorage _storage = FlutterSecureStorage(
+    aOptions: _androidOptions,
+  );
 
-  static Future<int?> getUserId() async {
-    final value = await _storage.read(key: _userId);
-    return value != null ? int.tryParse(value) : null;
-  }
+  // Keys
+  static const String _kUserId = "user_id"; // caregiver id
+  static const String _kElderId = "elder_id";
+  static const String _kRelationshipId = "relationship_id";
+  static const String _kLoggedIn = "logged_in";
+  static const String _kFcmToken = "fcm_token";
 
-  static Future<void> saveElderData(int elderId, int relationshipId) async {
-    await _storage.write(key: _elderId, value: elderId.toString());
-    await _storage.write(
-        key: _relationshipId, value: relationshipId.toString());
-  }
+  // Optional (helps later)
+  static const String _kRole = "role";         // caregiver | elder
+  static const String _kEmail = "email";
+  static const String _kAppType = "app_type";  // android | caregiver | elder etc.
 
-  static Future<int?> getElderId() async {
-    final value = await _storage.read(key: _elderId);
-    return value != null ? int.tryParse(value) : null;
+  // --------------------------
+  // Basic Auth Session
+  // --------------------------
+
+  static Future<void> setLoggedIn(bool value) async {
+    await _storage.write(key: _kLoggedIn, value: value ? "true" : "false");
   }
 
   static Future<bool> isLoggedIn() async {
-    final value = await _storage.read(key: _loggedIn);
-    return value == "true";
+    final v = await _storage.read(key: _kLoggedIn);
+    return v == "true";
   }
+
+  static Future<void> saveUser(int userId) async {
+    await _storage.write(key: _kUserId, value: userId.toString());
+    await setLoggedIn(true);
+  }
+
+  static Future<int?> getUserId() async {
+    final v = await _storage.read(key: _kUserId);
+    return int.tryParse(v ?? "");
+  }
+
+  // Optional meta
+  static Future<void> saveRole(String role) async {
+    await _storage.write(key: _kRole, value: role);
+  }
+
+  static Future<String?> getRole() async {
+    return await _storage.read(key: _kRole);
+  }
+
+  static Future<void> saveEmail(String email) async {
+    await _storage.write(key: _kEmail, value: email);
+  }
+
+  static Future<String?> getEmail() async {
+    return await _storage.read(key: _kEmail);
+  }
+
+  static Future<void> saveAppType(String appType) async {
+    await _storage.write(key: _kAppType, value: appType);
+  }
+
+  static Future<String?> getAppType() async {
+    return await _storage.read(key: _kAppType);
+  }
+
+  // --------------------------
+  // Elder / Relationship
+  // --------------------------
+
+  static Future<void> saveElderData(int elderId, int relationshipId) async {
+    await _storage.write(key: _kElderId, value: elderId.toString());
+    await _storage.write(key: _kRelationshipId, value: relationshipId.toString());
+  }
+
+  static Future<int?> getElderId() async {
+    final v = await _storage.read(key: _kElderId);
+    return int.tryParse(v ?? "");
+  }
+
+  static Future<int?> getRelationshipId() async {
+    final v = await _storage.read(key: _kRelationshipId);
+    return int.tryParse(v ?? "");
+  }
+
+  // --------------------------
+  // FCM Token
+  // --------------------------
 
   static Future<void> saveFCMToken(String token) async {
-    await _storage.write(key: _fcmToken, value: token);
+    // Avoid saving empty token
+    if (token.trim().isEmpty) return;
+    await _storage.write(key: _kFcmToken, value: token.trim());
   }
 
+  static Future<String?> getFCMToken() async {
+    return await _storage.read(key: _kFcmToken);
+  }
+
+  static Future<void> clearFCMToken() async {
+    await _storage.delete(key: _kFcmToken);
+  }
+
+  // --------------------------
+  // Utilities
+  // --------------------------
+
+  /// Clears only elder mapping (keep login/user)
+  static Future<void> clearElderData() async {
+    await _storage.delete(key: _kElderId);
+    await _storage.delete(key: _kRelationshipId);
+  }
+
+  /// Full logout (clears everything)
   static Future<void> logout() async {
-    await _storage.deleteAll();
+    await _storage.deleteAll(aOptions: _androidOptions);
+  }
+
+  /// Debug helper (don’t use in production logs)
+  static Future<Map<String, String>> dumpAll() async {
+    return await _storage.readAll(aOptions: _androidOptions);
   }
 }

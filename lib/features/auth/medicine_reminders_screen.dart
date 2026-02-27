@@ -10,13 +10,10 @@ class MedicineRemindersScreen extends StatefulWidget {
   const MedicineRemindersScreen({super.key, required this.elderId});
 
   @override
-  State<MedicineRemindersScreen> createState() =>
-      _MedicineRemindersScreenState();
+  State<MedicineRemindersScreen> createState() => _MedicineRemindersScreenState();
 }
 
-class _MedicineRemindersScreenState
-    extends State<MedicineRemindersScreen> {
-
+class _MedicineRemindersScreenState extends State<MedicineRemindersScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final nameCtrl = TextEditingController();
@@ -32,9 +29,7 @@ class _MedicineRemindersScreenState
 
   bool loading = false;
 
-  final List<String> weekDays = [
-    "Mon","Tue","Wed","Thu","Fri","Sat","Sun"
-  ];
+  final List<String> weekDays = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
   Future<void> addTime() async {
     if (selectedTimes.length >= 6) return;
@@ -44,8 +39,7 @@ class _MedicineRemindersScreenState
       initialTime: TimeOfDay.now(),
       builder: (context, child) {
         return MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(alwaysUse24HourFormat: true),
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
           child: child!,
         );
       },
@@ -72,6 +66,11 @@ class _MedicineRemindersScreenState
       setState(() {
         if (isStart) {
           startDate = picked;
+
+          // if endDate is before startDate, clear it (prevents backend invalid dates)
+          if (endDate != null && endDate!.isBefore(startDate!)) {
+            endDate = null;
+          }
         } else {
           endDate = picked;
         }
@@ -79,16 +78,30 @@ class _MedicineRemindersScreenState
     }
   }
 
+  // ✅ Always returns unique & sorted times in "HH:mm"
   List<String> getFormattedTimes() {
-    return selectedTimes.map((t) {
-      return "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
+    final formatted = selectedTimes.map((t) {
+      final h = t.hour.toString().padLeft(2, '0');
+      final m = t.minute.toString().padLeft(2, '0');
+      return "$h:$m";
     }).toList();
+
+    final unique = formatted.toSet().toList();
+    unique.sort();
+    return unique;
   }
 
+  // ✅ Return exactly what backend accepts:
+  // "Daily" | "EveryOtherDay" | "Mon,Wed,Fri"
   String buildRepeatString() {
     if (repeatMode == "Daily") return "Daily";
     if (repeatMode == "EveryOtherDay") return "EveryOtherDay";
-    return selectedDays.join(",");
+
+    // Custom -> keep consistent weekday ordering
+    final order = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    final uniqueDays = selectedDays.toSet().toList();
+    uniqueDays.sort((a, b) => order.indexOf(a).compareTo(order.indexOf(b)));
+    return uniqueDays.join(",");
   }
 
   void clearForm() {
@@ -125,8 +138,7 @@ class _MedicineRemindersScreenState
     try {
       final caregiverId = await SessionManager.getUserId();
 
-      final startDateFormatted =
-      DateFormat('yyyy-MM-dd').format(startDate!);
+      final startDateFormatted = DateFormat('yyyy-MM-dd').format(startDate!);
 
       final endDateFormatted = endDate == null
           ? null
@@ -152,6 +164,7 @@ class _MedicineRemindersScreenState
 
       clearForm();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(e.toString())));
     }
@@ -162,7 +175,9 @@ class _MedicineRemindersScreenState
   void goToNextPage() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => EmergencyContactsPage(elderId: widget.elderId)),
+      MaterialPageRoute(
+        builder: (_) => EmergencyContactsPage(elderId: widget.elderId),
+      ),
     );
   }
 
@@ -223,6 +238,10 @@ class _MedicineRemindersScreenState
                         _buildInputField(
                           controller: nameCtrl,
                           label: "Medicine Name",
+                          validator: (v) =>
+                          v == null || v.trim().isEmpty
+                              ? "Medicine name required"
+                              : null,
                         ),
 
                         const SizedBox(height: 15),
@@ -230,6 +249,10 @@ class _MedicineRemindersScreenState
                         _buildInputField(
                           controller: dosageCtrl,
                           label: "Dosage",
+                          validator: (v) =>
+                          v == null || v.trim().isEmpty
+                              ? "Dosage required"
+                              : null,
                         ),
 
                         const SizedBox(height: 15),
@@ -339,8 +362,7 @@ class _MedicineRemindersScreenState
                         ),
                         RadioListTile(
                           activeColor: AppColors.primary,
-                          title:
-                          const Text("Every Other Day"),
+                          title: const Text("Every Other Day"),
                           value: "EveryOtherDay",
                           groupValue: repeatMode,
                           onChanged: (v) =>
@@ -348,8 +370,7 @@ class _MedicineRemindersScreenState
                         ),
                         RadioListTile(
                           activeColor: AppColors.primary,
-                          title:
-                          const Text("Specific Days"),
+                          title: const Text("Specific Days"),
                           value: "Custom",
                           groupValue: repeatMode,
                           onChanged: (v) =>
@@ -410,21 +431,16 @@ class _MedicineRemindersScreenState
                           borderRadius:
                           BorderRadius.circular(30),
                         ),
-                        padding:
-                        const EdgeInsets.symmetric(
-                            vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      onPressed:
-                      loading ? null : submitMedicine,
+                      onPressed: loading ? null : submitMedicine,
                       child: loading
-                          ? const CircularProgressIndicator(
-                          color: Colors.white)
+                          ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
                         "Save Medicine",
                         style: TextStyle(
                           color: Colors.white,
-                          fontWeight:
-                          FontWeight.bold,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -434,15 +450,12 @@ class _MedicineRemindersScreenState
                     width: double.infinity,
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                            color: AppColors.primary),
+                        side: const BorderSide(color: AppColors.primary),
                         shape: RoundedRectangleBorder(
                           borderRadius:
                           BorderRadius.circular(30),
                         ),
-                        padding:
-                        const EdgeInsets.symmetric(
-                            vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: goToNextPage,
                       child: const Text(
@@ -489,13 +502,10 @@ class _MedicineRemindersScreenState
       validator: validator,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle:
-        const TextStyle(color: AppColors.textShade),
+        labelStyle: const TextStyle(color: AppColors.textShade),
         filled: true,
         fillColor: AppColors.sectionBackground,
-        contentPadding:
-        const EdgeInsets.symmetric(
-            horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: BorderSide.none,
@@ -514,12 +524,10 @@ class _MedicineRemindersScreenState
         borderRadius: BorderRadius.circular(15),
       ),
       child: ListTile(
-        leading: const Icon(Icons.calendar_today,
-            color: AppColors.primary),
+        leading: const Icon(Icons.calendar_today, color: AppColors.primary),
         title: Text(
           title,
-          style: const TextStyle(
-              fontWeight: FontWeight.w500),
+          style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         onTap: onTap,
       ),
