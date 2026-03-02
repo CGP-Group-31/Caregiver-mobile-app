@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../auth/elder_profile.dart';
 import '../dashboard/dashboard_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget{
@@ -13,7 +14,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   final List<Widget> _screens = const [
     DashboardScreen(),
-    PlaceholderScreen(title: "Elder Profile"),
+    ElderProfileScreen(),
     PlaceholderScreen(title: "SOS Alerts"),
     PlaceholderScreen(title: "More"),
   ];
