@@ -18,8 +18,7 @@ class SessionManager {
   static const String _kRelationshipId = "relationship_id";
   static const String _kLoggedIn = "logged_in";
   static const String _kFcmToken = "fcm_token";
-
-  // Optional (helps later)
+  static const String _kFullName = "full_name"; // caregiver full name
   static const String _kRole = "role";         // caregiver
   static const String _kEmail = "email";
   static const String _kAppType = "app_type";  //  caregiver
@@ -43,6 +42,16 @@ class SessionManager {
   static Future<int?> getUserId() async {
     final v = await _storage.read(key: _kUserId);
     return int.tryParse(v ?? "");
+  }
+
+  // Full Name
+
+  static Future<void> saveFullName(String fullName) async {
+    await _storage.write(key: _kFullName, value: fullName);
+  }
+
+  static Future<String?> getFullName() async {
+    return await _storage.read(key: _kFullName);
   }
 
   // Optional meta
@@ -130,7 +139,7 @@ class SessionManager {
     final role = await _storage.read(key: _kRole, aOptions: _androidOptions);
     final email = await _storage.read(key: _kEmail, aOptions: _androidOptions);
     final appType = await _storage.read(key: _kAppType, aOptions: _androidOptions);
-
+    final fullName = await _storage.read(key: _kFullName, aOptions: _androidOptions);
     return {
       _kUserId: userId,
       _kElderId: elderId,
@@ -140,6 +149,7 @@ class SessionManager {
       _kRole: role,
       _kEmail: email,
       _kAppType: appType,
+      _kFullName: fullName,
     };
   }
   /// Debug: Pretty print session values (shows nulls too)
