@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/session/session_manager.dart';
 import '../../core/network/dio_client.dart';
-import '../../features/auth/theme.dart'; // adjust path if needed
+import '../../features/auth/theme.dart';
 
 class CaregiverProfileScreen extends StatefulWidget {
   const CaregiverProfileScreen({super.key});
@@ -115,6 +115,8 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
     required String label,
     required String value,
   }) {
+    final show = value.trim().isEmpty ? "-" : value.trim();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Row(
@@ -143,7 +145,7 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  value.isEmpty ? "-" : value,
+                  show,
                   style: const TextStyle(
                     color: AppColors.primaryText,
                     fontWeight: FontWeight.w900,
@@ -225,47 +227,35 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
               Center(
                 child: Column(
                   children: [
-                    Stack(
-                      children: [
-                        Container(
-                          width: 110,
-                          height: 110,
-                          decoration: BoxDecoration(
-                            color: AppColors.sectionBackground
-                                .withValues(alpha: 0.45),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.textShade
-                                  .withValues(alpha: 0.22),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.person_rounded,
-                            size: 52,
-                            color: AppColors.primary,
-                          ),
+                    Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        color: AppColors.sectionBackground
+                            .withValues(alpha: 0.45),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.textShade
+                              .withValues(alpha: 0.22),
                         ),
-                      ],
+                      ),
+                      child: const Icon(
+                        Icons.person_rounded,
+                        size: 52,
+                        color: AppColors.primary,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      fullName.isEmpty ? "Caregiver" : fullName,
+                      fullName.trim().isEmpty ? "Caregiver" : fullName,
                       style: const TextStyle(
                         color: AppColors.primaryText,
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      email.isEmpty ? "-" : email,
-                      style: TextStyle(
-                        color:
-                        AppColors.descriptionText.withValues(alpha: 0.95),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13.5,
-                      ),
-                    ),
+
+                    // ✅ Removed email/username below name
                   ],
                 ),
               ),
@@ -294,13 +284,13 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
                 ],
               ),
 
-              // ACCOUNT (Email as Username)
+              // ACCOUNT
               _sectionTitle("Account"),
               _card(
                 children: [
                   _rowItem(
                     icon: Icons.alternate_email_rounded,
-                    label: "Username (Email)",
+                    label: "Email",
                     value: email,
                   ),
                 ],
