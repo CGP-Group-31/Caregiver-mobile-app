@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../dashboard/main_navigation_screen.dart';
 import 'theme.dart';
-import 'login_screen.dart';
 
 class SetupCompletePage extends StatelessWidget {
   const SetupCompletePage({super.key});
@@ -45,7 +45,7 @@ class SetupCompletePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                "Your emergency contacts and profile have been successfully configured. You're ready to use the app. \n Login to the Application",
+                "Your emergency contacts and profile have been successfully configured. You're ready to use the app.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 17,
@@ -56,16 +56,17 @@ class SetupCompletePage extends StatelessWidget {
 
               const Spacer(),
 
-              // 4. Main Action Button - #2E7D7A
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.push(
+                    // Navigate to Dashboard instead of Login
+                    Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const  LoginScreen(),
+                        builder: (_) => const MainNavigationScreen(),
                       ),
+                      (route) => false, // Clear the navigation stack
                     );
                   },
 
