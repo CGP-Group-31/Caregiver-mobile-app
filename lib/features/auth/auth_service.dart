@@ -63,7 +63,6 @@ class AuthService {
       throw _handleError(e);
     }
   }
-
   static Future<Map<String, dynamic>> loginCaregiver({
     required String email,
     required String password,
@@ -84,12 +83,34 @@ class AuthService {
         },
       );
 
-      return response.data;
+      final Map<String, dynamic> data = Map<String, dynamic>.from(response.data);
+
+      // 1) print before saving
+      await SessionManager.debugPrintSession(tag: "AFTER LOGIN (before saving anything)");
+
+      // 2) save session (same logic, but using data[])
+      await SessionManager.saveUser(data["user_id"] as int);
+      await SessionManager.saveRole("caregiver");
+      await SessionManager.saveEmail(data["email"] as String);
+      await SessionManager.saveAppType("caregiver");
+
+      final elderId = data["elder_id"];
+      final relationshipId = data["relationship_id"];
+      if (elderId != null && relationshipId != null) {
+        await SessionManager.saveElderData(
+          elderId as int,
+          relationshipId as int,
+        );
+      }
+
+      // 3) print after saving
+      await SessionManager.debugPrintSession(tag: "AFTER LOGIN (after saving)");
+
+      return data;
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
-
   static Future<Map<String, dynamic>> createElder({
     required String fullName,
     required String email,

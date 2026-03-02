@@ -7,7 +7,7 @@
     <application
         android:label="caregiver"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_trust"
         android:usesCleartextTraffic="true"
         android:enableOnBackInvokedCallback="true">
         <activity
