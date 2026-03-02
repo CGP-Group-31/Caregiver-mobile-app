@@ -3,6 +3,8 @@ import '../../core/session/session_manager.dart';
 import '../../features/auth/theme.dart';
 import '../auth/login_screen.dart';
 
+import 'caregiver_profile_screen.dart';
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -161,12 +163,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  void _goToProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Profile page not connected yet")),
     );
   }
 
@@ -390,6 +386,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _goToProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CaregiverProfileScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -417,7 +420,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.person_rounded,
                     title: "Profile",
                     subtitle: "View and edit caregiver details",
-                    onTap: _goToProfile,
+                    onTap: _goToProfile, // ✅ now linked
                   ),
                   _divider(),
 
