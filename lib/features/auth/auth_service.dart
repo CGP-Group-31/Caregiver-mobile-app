@@ -93,7 +93,7 @@ class AuthService {
       await SessionManager.saveRole("caregiver");
       await SessionManager.saveEmail(data["email"] as String);
       await SessionManager.saveAppType("caregiver");
-
+      await SessionManager.saveFullName(data["full_name"] as String);
       final elderId = data["elder_id"];
       final relationshipId = data["relationship_id"];
       if (elderId != null && relationshipId != null) {

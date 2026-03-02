@@ -3,7 +3,7 @@ import '../elder/elder_model.dart';
 import '../elder/elder_service.dart';
 import '../elder/medical_record_screen.dart';
 import 'theme.dart';
-
+import '../elder/health_details_page.dart';
 class ElderProfileScreen extends StatefulWidget {
   const ElderProfileScreen({super.key});
 
@@ -119,7 +119,7 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                           const SizedBox(height: 40),
                           _buildPremiumNavTile(
                             context,
-                            title: "Health Details",
+                            title: "Health Details",   //visha kiwwa name ke change wenawa kiyala
                             description: "Vitals, History & Meds",
                             icon: Icons.favorite_outline_rounded,
                             onTap: () {
@@ -142,6 +142,18 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                             description: "Live Tracking & History",
                             icon: Icons.near_me_outlined,
                             onTap: () {},
+                          ),
+                          _buildPremiumNavTile(
+                            context,
+                            title: "Health Details",
+                            description: "Vitals, History & Meds",
+                            icon: Icons.favorite_outline_rounded,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const HealthDetailsPage()),
+                              );
+                            },
                           ),
                           const SizedBox(height: 50),
                         ],
