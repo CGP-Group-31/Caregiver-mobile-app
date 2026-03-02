@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
-import '../dashboard/main_navigation_screen.dart';
+import 'login_screen.dart';
 
 class SetupCompletePage extends StatelessWidget {
   const SetupCompletePage({super.key});
@@ -45,7 +45,7 @@ class SetupCompletePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                "Your emergency contacts and profile have been successfully configured. You're ready to use the app.",
+                "Your emergency contacts and profile have been successfully configured. You're ready to use the app. \n Login to the Application",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 17,
@@ -64,7 +64,7 @@ class SetupCompletePage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const MainNavigationScreen(),
+                        builder: (_) => const  LoginScreen(),
                       ),
                     );
                   },
