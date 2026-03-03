@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/session/session_manager.dart';
 import '../../core/network/dio_client.dart';
-import '../../features/auth/theme.dart'; // adjust path if needed
+import '../../features/auth/theme.dart';
 
 class CaregiverProfileScreen extends StatefulWidget {
   const CaregiverProfileScreen({super.key});
@@ -22,6 +22,7 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
   String phone = "";
   String dob = "";
   String gender = "";
+  String address = "";
 
   @override
   void initState() {
@@ -50,14 +51,17 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
         queryParameters: {"caregiver_id": caregiverId},
       );
 
-      final data = res.data as Map<String, dynamic>;
+      final data = (res.data is Map)
+          ? (res.data as Map<String, dynamic>)
+          : <String, dynamic>{};
 
       setState(() {
-        fullName = (data["FullName"] ?? "").toString();
-        email = (data["Email"] ?? "").toString();
-        phone = (data["Phone"] ?? "").toString();
-        dob = (data["DateOfBirth"] ?? "").toString();
-        gender = (data["Gender"] ?? "").toString();
+        fullName = (data["FullName"] ?? data["full_name"] ?? "").toString();
+        email = (data["Email"] ?? data["email"] ?? "").toString();
+        phone = (data["Phone"] ?? data["phone"] ?? "").toString();
+        dob = (data["DateOfBirth"] ?? data["date_of_birth"] ?? "").toString();
+        gender = (data["Gender"] ?? data["gender"] ?? "").toString();
+        address = (data["Address"] ?? data["address"] ?? "").toString();
         loading = false;
       });
     } on DioException catch (e) {
@@ -74,6 +78,284 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
         error = "Something went wrong";
       });
     }
+  }
+
+  // ---------- EDIT POPUP ----------
+  Future<void> _openEditSheet() async {
+    final caregiverId = await SessionManager.getUserId();
+    if (caregiverId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No caregiver session found. Please login again.")),
+      );
+      return;
+    }
+
+    final phoneCtrl = TextEditingController(text: phone);
+    final emailCtrl = TextEditingController(text: email);
+    final addressCtrl = TextEditingController(text: address);
+
+    final formKey = GlobalKey<FormState>();
+    bool saving = false;
+    String? apiError;
+
+    String? emailValidator(String? v) {
+      final value = (v ?? "").trim();
+      if (value.isEmpty) return "Email is required";
+      if (!RegExp(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").hasMatch(value)) {
+        return "Enter a valid email";
+      }
+      return null;
+    }
+
+    String? phoneValidator(String? v) {
+      final value = (v ?? "").trim();
+      if (value.isEmpty) return "Phone is required";
+      final digits = value.replaceAll(RegExp(r"\D"), "");
+      if (digits.length < 9 || digits.length > 15) {
+        return "Enter a valid phone number";
+      }
+      return null;
+    }
+
+    String? addressValidator(String? v) {
+      final value = (v ?? "").trim();
+      if (value.isEmpty) return "Address is required";
+      if (value.length < 5) return "Address is too short";
+      if (value.length > 180) return "Address is too long";
+      return null;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.containerBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            Future<void> save() async {
+              FocusScope.of(ctx).unfocus();
+              apiError = null;
+
+              final ok = formKey.currentState?.validate() ?? false;
+              if (!ok) {
+                setLocal(() {});
+                return;
+              }
+
+              setLocal(() => saving = true);
+
+              try {
+                // ✅ Update API (password + full_name ignored)
+                await DioClient.dio.put(
+                  "/api/v1/caregiver/caregiver-profile/$caregiverId",
+                  data: {
+                    "phone": phoneCtrl.text.trim(),
+                    "address": addressCtrl.text.trim(),
+                    "email": emailCtrl.text.trim(),
+                  },
+                );
+
+                // Update UI immediately
+                if (!mounted) return;
+                setState(() {
+                  phone = phoneCtrl.text.trim();
+                  address = addressCtrl.text.trim();
+                  email = emailCtrl.text.trim();
+                });
+
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Profile updated successfully")),
+                );
+              } on DioException catch (e) {
+                final detail = (e.response?.data is Map && e.response?.data["detail"] != null)
+                    ? e.response?.data["detail"].toString()
+                    : "Failed to update profile";
+                setLocal(() {
+                  apiError = detail;
+                  saving = false;
+                });
+              } catch (_) {
+                setLocal(() {
+                  apiError = "Something went wrong";
+                  saving = false;
+                });
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 14,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppColors.textShade.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    "Edit Profile",
+                    style: TextStyle(
+                      color: AppColors.primaryText,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (apiError != null) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.emergencyBackground.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: AppColors.sosButton.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Text(
+                        apiError!,
+                        style: TextStyle(
+                          color: AppColors.sosButton.withValues(alpha: 0.95),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  Form(
+                    key: formKey,
+                    child: Column(
+                      children: [
+                        _editField(
+                          controller: phoneCtrl,
+                          label: "Phone",
+                          keyboardType: TextInputType.phone,
+                          validator: phoneValidator,
+                        ),
+                        const SizedBox(height: 10),
+                        _editField(
+                          controller: emailCtrl,
+                          label: "Email",
+                          keyboardType: TextInputType.emailAddress,
+                          validator: emailValidator,
+                        ),
+                        const SizedBox(height: 10),
+                        _editField(
+                          controller: addressCtrl,
+                          label: "Address",
+                          keyboardType: TextInputType.streetAddress,
+                          maxLines: 2,
+                          validator: addressValidator,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: saving ? null : save,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: saving
+                          ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                          : const Text(
+                        "Save",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static Widget _editField({
+    required TextEditingController controller,
+    required String label,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      validator: validator,
+      style: const TextStyle(
+        color: AppColors.primaryText,
+        fontWeight: FontWeight.w700,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(
+          color: AppColors.descriptionText.withValues(alpha: 0.95),
+          fontWeight: FontWeight.w700,
+        ),
+        filled: true,
+        fillColor: AppColors.sectionBackground.withValues(alpha: 0.28),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: AppColors.textShade.withValues(alpha: 0.18),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: AppColors.textShade.withValues(alpha: 0.18),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(
+            color: AppColors.primary,
+            width: 1.6,
+          ),
+        ),
+      ),
+    );
   }
 
   // ---------- UI helpers ----------
@@ -143,7 +425,7 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  value.isEmpty ? "-" : value,
+                  value.trim().isEmpty ? "-" : value.trim(),
                   style: const TextStyle(
                     color: AppColors.primaryText,
                     fontWeight: FontWeight.w900,
@@ -158,6 +440,7 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
     );
   }
 
+  // ---------- BUILD ----------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -170,6 +453,13 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
           "Profile",
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
+        actions: [
+          IconButton(
+            tooltip: "Edit",
+            onPressed: loading ? null : _openEditSheet,
+            icon: const Icon(Icons.edit_rounded),
+          ),
+        ],
       ),
       body: SafeArea(
         child: loading
@@ -221,49 +511,33 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // PROFILE HEADER
+              // HEADER
               Center(
                 child: Column(
                   children: [
-                    Stack(
-                      children: [
-                        Container(
-                          width: 110,
-                          height: 110,
-                          decoration: BoxDecoration(
-                            color: AppColors.sectionBackground
-                                .withValues(alpha: 0.45),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.textShade
-                                  .withValues(alpha: 0.22),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.person_rounded,
-                            size: 52,
-                            color: AppColors.primary,
-                          ),
+                    Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        color: AppColors.sectionBackground.withValues(alpha: 0.45),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.textShade.withValues(alpha: 0.22),
                         ),
-                      ],
+                      ),
+                      child: const Icon(
+                        Icons.person_rounded,
+                        size: 52,
+                        color: AppColors.primary,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      fullName.isEmpty ? "Caregiver" : fullName,
+                      fullName.trim().isEmpty ? "Caregiver" : fullName.trim(),
                       style: const TextStyle(
                         color: AppColors.primaryText,
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      email.isEmpty ? "-" : email,
-                      style: TextStyle(
-                        color:
-                        AppColors.descriptionText.withValues(alpha: 0.95),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13.5,
                       ),
                     ),
                   ],
@@ -291,16 +565,22 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
                     label: "Gender",
                     value: gender,
                   ),
+                  _divider(),
+                  _rowItem(
+                    icon: Icons.location_on_rounded,
+                    label: "Address",
+                    value: address,
+                  ),
                 ],
               ),
 
-              // ACCOUNT (Email as Username)
+              // ACCOUNT
               _sectionTitle("Account"),
               _card(
                 children: [
                   _rowItem(
                     icon: Icons.alternate_email_rounded,
-                    label: "Username (Email)",
+                    label: "Email",
                     value: email,
                   ),
                 ],
