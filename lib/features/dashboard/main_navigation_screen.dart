@@ -12,23 +12,22 @@ class MainNavigationScreen extends StatefulWidget{
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    DashboardScreen(),
-    ElderProfileScreen(),
-    PlaceholderScreen(title: "SOS Alerts"),
-    PlaceholderScreen(title: "More"),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  void _onItemTapped(int index){
+    setState(() => _selectedIndex = index);
   }
+
+
 
   @override
   Widget build(BuildContext context){
+    final screens = <Widget> [
+      DashboardScreen(),
+      ElderProfileScreen(onBackToHome: () => _onItemTapped(0)),
+      PlaceholderScreen(title: "SOS Alerts"),
+      PlaceholderScreen(title: "More"),
+    ];
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
