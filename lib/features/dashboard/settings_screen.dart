@@ -94,9 +94,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         content: SingleChildScrollView(
           child: Text(
-            "TrustCare collects only the information necessary to provide caregiving features, including caregiver details, elder medical information, reminders, and optional location and other relevant data.\n\n"
-                "All data is transmitted securely and used solely to support app functionality. We do not sell or share personal data for marketing purposes.\n\n"
-                "TrustCare does not provide medical advice and should not replace professional healthcare services.",
+            "TrustCare collects only what is needed to provide caregiving features "
+                "(caregiver/elder details, medical info, reminders, and safety alerts). "
+                "Data is used only for app functionality and is not sold for marketing.\n\n"
+                "TrustCare does not provide medical advice and is not a replacement for professional care.",
             style: TextStyle(
               color: AppColors.primaryText.withValues(alpha: 0.78),
               height: 1.35,
@@ -135,8 +136,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         content: Text(
           "TrustCare — Caregiver App\n\n"
-              "TrustCare helps caregivers support elderly loved ones by managing medical information, reminders, alerts, and safety features.\n\n"
-              "TrustCare is a support tool and does not replace professional medical advice or emergency services.\n\n"
+              "A companion app to help caregivers manage elder medical info, reminders, "
+              "and receive safety alerts.\n\n"
               "Version: 1.0.0",
           style: TextStyle(
             color: AppColors.primaryText.withValues(alpha: 0.78),
@@ -295,7 +296,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _tile(
                     icon: Icons.person_rounded,
                     title: "Profile",
-                    subtitle: "View caregiver details",
+                    subtitle: "View and edit caregiver details",
                     onTap: _goToProfile,
                   ),
                 ],
