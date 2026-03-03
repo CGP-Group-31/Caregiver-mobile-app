@@ -33,7 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool loading = false;
   bool showPassword = false;
 
-  final List<String> genders = const ["Male", "Female", "Other", "Prefer not to say"];
+  final List<String> genders = const ["Male", "Female"];
 
   @override
   void dispose() {

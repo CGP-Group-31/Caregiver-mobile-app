@@ -3,7 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class SessionManager {
   SessionManager._();
 
-  /// ✅ Stronger Android secure storage (EncryptedSharedPreferences)
+  /// Stronger Android secure storage (EncryptedSharedPreferences)
   static const AndroidOptions _androidOptions = AndroidOptions(
     encryptedSharedPreferences: true,
   );
@@ -18,16 +18,13 @@ class SessionManager {
   static const String _kRelationshipId = "relationship_id";
   static const String _kLoggedIn = "logged_in";
   static const String _kFcmToken = "fcm_token";
-
-  // Optional (helps later)
-  static const String _kRole = "role";         // caregiver | elder
+  static const String _kFullName = "full_name"; // caregiver full name
+  static const String _kRole = "role";         // caregiver
   static const String _kEmail = "email";
-  static const String _kAppType = "app_type";  // android | caregiver | elder etc.
+  static const String _kAppType = "app_type";  //  caregiver
 
-  // --------------------------
+
   // Basic Auth Session
-  // --------------------------
-
   static Future<void> setLoggedIn(bool value) async {
     await _storage.write(key: _kLoggedIn, value: value ? "true" : "false");
   }
@@ -45,6 +42,16 @@ class SessionManager {
   static Future<int?> getUserId() async {
     final v = await _storage.read(key: _kUserId);
     return int.tryParse(v ?? "");
+  }
+
+  // Full Name
+
+  static Future<void> saveFullName(String fullName) async {
+    await _storage.write(key: _kFullName, value: fullName);
+  }
+
+  static Future<String?> getFullName() async {
+    return await _storage.read(key: _kFullName);
   }
 
   // Optional meta
@@ -72,9 +79,7 @@ class SessionManager {
     return await _storage.read(key: _kAppType);
   }
 
-  // --------------------------
   // Elder / Relationship
-  // --------------------------
 
   static Future<void> saveElderData(int elderId, int relationshipId) async {
     await _storage.write(key: _kElderId, value: elderId.toString());
@@ -91,9 +96,7 @@ class SessionManager {
     return int.tryParse(v ?? "");
   }
 
-  // --------------------------
   // FCM Token
-  // --------------------------
 
   static Future<void> saveFCMToken(String token) async {
     // Avoid saving empty token
@@ -108,10 +111,7 @@ class SessionManager {
   static Future<void> clearFCMToken() async {
     await _storage.delete(key: _kFcmToken);
   }
-
-  // --------------------------
   // Utilities
-  // --------------------------
 
   /// Clears only elder mapping (keep login/user)
   static Future<void> clearElderData() async {
@@ -127,5 +127,36 @@ class SessionManager {
   /// Debug helper (don’t use in production logs)
   static Future<Map<String, String>> dumpAll() async {
     return await _storage.readAll(aOptions: _androidOptions);
+  }
+
+
+  static Future<Map<String, String?>> dumpKnownSessionKeys() async {
+    final userId = await _storage.read(key: _kUserId, aOptions: _androidOptions);
+    final elderId = await _storage.read(key: _kElderId, aOptions: _androidOptions);
+    final relationshipId = await _storage.read(key: _kRelationshipId, aOptions: _androidOptions);
+    final loggedIn = await _storage.read(key: _kLoggedIn, aOptions: _androidOptions);
+    final fcmToken = await _storage.read(key: _kFcmToken, aOptions: _androidOptions);
+    final role = await _storage.read(key: _kRole, aOptions: _androidOptions);
+    final email = await _storage.read(key: _kEmail, aOptions: _androidOptions);
+    final appType = await _storage.read(key: _kAppType, aOptions: _androidOptions);
+    final fullName = await _storage.read(key: _kFullName, aOptions: _androidOptions);
+    return {
+      _kUserId: userId,
+      _kElderId: elderId,
+      _kRelationshipId: relationshipId,
+      _kLoggedIn: loggedIn,
+      _kFcmToken: fcmToken,
+      _kRole: role,
+      _kEmail: email,
+      _kAppType: appType,
+      _kFullName: fullName,
+    };
+  }
+  /// Debug: Pretty print session values (shows nulls too)
+  static Future<void> debugPrintSession({String tag = "SESSION"}) async {
+    final map = await dumpKnownSessionKeys();
+    for (final e in map.entries) {
+      print("${e.key}: ${e.value ?? "null"}");
+    }
   }
 }

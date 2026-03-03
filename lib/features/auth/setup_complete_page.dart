@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'theme.dart';
 import '../dashboard/main_navigation_screen.dart';
+import 'theme.dart';
 
 class SetupCompletePage extends StatelessWidget {
   const SetupCompletePage({super.key});
@@ -56,16 +56,17 @@ class SetupCompletePage extends StatelessWidget {
 
               const Spacer(),
 
-              // 4. Main Action Button - #2E7D7A
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.push(
+                    // Navigate to Dashboard instead of Login
+                    Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
                         builder: (_) => const MainNavigationScreen(),
                       ),
+                      (route) => false, // Clear the navigation stack
                     );
                   },
 
