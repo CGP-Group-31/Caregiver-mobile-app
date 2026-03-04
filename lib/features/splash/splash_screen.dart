@@ -1,8 +1,10 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import '../../core/session/session_manager.dart';
 import '../auth/welcome_screen.dart';
 import '../dashboard/dashboard_screen.dart';
-
+import '../../core/notifications/fcm_manager.dart';
+import '../dashboard/main_navigation_screen.dart';
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -23,7 +25,9 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-
+    FirebaseMessaging.onMessage.listen((message) {
+      print("FCM Foreground: ${message.notification?.title} | ${message.notification?.body}");
+    });
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -52,7 +56,7 @@ class _SplashScreenState extends State<SplashScreen>
       context,
       MaterialPageRoute(
         builder: (_) =>
-        isLoggedIn ? const DashboardScreen() : const WelcomeScreen(),
+        isLoggedIn ? const MainNavigationScreen() : const WelcomeScreen(),
       ),
     );
   }
