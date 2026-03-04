@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/session/session_manager.dart';
+import '../auth/theme.dart';
 import 'update_medicine_screen.dart';
 import 'delete_medicine_screen.dart';
 import 'medicine_reminders_screen.dart';
@@ -28,6 +29,54 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
   }
 
+  Widget buildCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      decoration: BoxDecoration(
+        color: AppColors.containerBackground,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0,5),
+          )
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(18),
+
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: AppColors.sectionBackground,
+          child: Icon(icon, color: AppColors.primary),
+        ),
+
+        title: Text(
+          title,
+          style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: AppColors.primaryText),
+        ),
+
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(color: AppColors.descriptionText),
+        ),
+
+        trailing: const Icon(Icons.arrow_forward_ios,size:16),
+
+        onTap: onTap,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -38,33 +87,38 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
 
     return Scaffold(
+      backgroundColor: AppColors.mainBackground,
+
       appBar: AppBar(
-        title: const Text("Schedule"),
+        title: const Text("Medication Schedule"),
+        backgroundColor: AppColors.primary,
       ),
 
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
 
-            ElevatedButton(
-              onPressed: () {
+            buildCard(
+              icon: Icons.add_circle_outline,
+              title: "Create Medicine",
+              subtitle: "Add a new medication schedule",
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => MedicineRemindersScreen(
-                      elderId: elderId!,
-                    ),
+                    builder: (_) =>
+                        MedicineRemindersScreen(elderId: elderId!),
                   ),
                 );
               },
-              child: const Text("Create Medicine"),
             ),
 
-            const SizedBox(height: 20),
-
-            ElevatedButton(
-              onPressed: () {
+            buildCard(
+              icon: Icons.edit_calendar,
+              title: "Update Medicine",
+              subtitle: "Edit an existing medicine schedule",
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -72,13 +126,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   ),
                 );
               },
-              child: const Text("Update Medicine"),
             ),
 
-            const SizedBox(height: 20),
-
-            ElevatedButton(
-              onPressed: () {
+            buildCard(
+              icon: Icons.delete_outline,
+              title: "Delete Medicine",
+              subtitle: "Remove a medicine schedule",
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -86,7 +140,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   ),
                 );
               },
-              child: const Text("Delete Medicine"),
             ),
           ],
         ),

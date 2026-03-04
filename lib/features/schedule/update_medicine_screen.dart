@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/session/session_manager.dart';
+import '../auth/theme.dart';
 import 'edit_medicine_form.dart';
 
 class UpdateMedicineScreen extends StatefulWidget {
@@ -40,26 +41,60 @@ class _UpdateMedicineScreenState extends State<UpdateMedicineScreen> {
   Widget build(BuildContext context) {
 
     return Scaffold(
+      backgroundColor: AppColors.mainBackground,
+
       appBar: AppBar(
-        title: const Text("Select Medicine to Update"),
+        title: const Text("Update Medicine"),
+        backgroundColor: AppColors.primary,
       ),
 
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
+        padding: const EdgeInsets.all(16),
         itemCount: medicines.length,
         itemBuilder: (context, index) {
 
           final med = medicines[index];
 
-          return Card(
-            margin: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 8),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 14),
+
+            decoration: BoxDecoration(
+              color: AppColors.containerBackground,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                )
+              ],
+            ),
 
             child: ListTile(
-              title: Text(med["name"]),
-              subtitle: Text("Dosage: ${med["dosage"]}"),
-              trailing: const Icon(Icons.edit),
+              contentPadding: const EdgeInsets.all(16),
+
+              leading: CircleAvatar(
+                backgroundColor: AppColors.sectionBackground,
+                child: const Icon(Icons.medication,
+                    color: AppColors.primary),
+              ),
+
+              title: Text(
+                med["name"],
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText),
+              ),
+
+              subtitle: Text(
+                "Dosage: ${med["dosage"]}",
+                style: const TextStyle(
+                    color: AppColors.descriptionText),
+              ),
+
+              trailing: const Icon(Icons.edit,
+                  color: AppColors.primary),
 
               onTap: () {
                 Navigator.push(

@@ -66,8 +66,6 @@ class _MedicineRemindersScreenState extends State<MedicineRemindersScreen> {
       setState(() {
         if (isStart) {
           startDate = picked;
-
-          // if endDate is before startDate, clear it (prevents backend invalid dates)
           if (endDate != null && endDate!.isBefore(startDate!)) {
             endDate = null;
           }
@@ -78,7 +76,6 @@ class _MedicineRemindersScreenState extends State<MedicineRemindersScreen> {
     }
   }
 
-  // ✅ Always returns unique & sorted times in "HH:mm"
   List<String> getFormattedTimes() {
     final formatted = selectedTimes.map((t) {
       final h = t.hour.toString().padLeft(2, '0');
@@ -91,13 +88,10 @@ class _MedicineRemindersScreenState extends State<MedicineRemindersScreen> {
     return unique;
   }
 
-  // ✅ Return exactly what backend accepts:
-  // "Daily" | "EveryOtherDay" | "Mon,Wed,Fri"
   String buildRepeatString() {
     if (repeatMode == "Daily") return "Daily";
     if (repeatMode == "EveryOtherDay") return "EveryOtherDay";
 
-    // Custom -> keep consistent weekday ordering
     final order = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
     final uniqueDays = selectedDays.toSet().toList();
     uniqueDays.sort((a, b) => order.indexOf(a).compareTo(order.indexOf(b)));
@@ -210,20 +204,19 @@ class _MedicineRemindersScreenState extends State<MedicineRemindersScreen> {
         child: Column(
           children: [
 
-            /// FORM AREA
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
                     color: AppColors.containerBackground,
-                    borderRadius: BorderRadius.circular(25),
+                    borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
                         blurRadius: 12,
-                        offset: const Offset(0, 6),
+                        offset: const Offset(0,6),
                       )
                     ],
                   ),
@@ -283,7 +276,7 @@ class _MedicineRemindersScreenState extends State<MedicineRemindersScreen> {
                             margin: const EdgeInsets.only(bottom: 10),
                             decoration: BoxDecoration(
                               color: AppColors.sectionBackground,
-                              borderRadius: BorderRadius.circular(15),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: ListTile(
                               leading: const Icon(Icons.access_time,
@@ -417,11 +410,11 @@ class _MedicineRemindersScreenState extends State<MedicineRemindersScreen> {
               ),
             ),
 
-            /// BUTTON AREA
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -445,7 +438,9 @@ class _MedicineRemindersScreenState extends State<MedicineRemindersScreen> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
@@ -466,7 +461,7 @@ class _MedicineRemindersScreenState extends State<MedicineRemindersScreen> {
                         ),
                       ),
                     ),
-                  ),
+                  )
                 ],
               ),
             ),

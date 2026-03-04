@@ -4,7 +4,6 @@ import '../auth/theme.dart';
 import 'medicine_service.dart';
 
 class EditMedicineScreen extends StatefulWidget {
-
   final int medicineId;
 
   const EditMedicineScreen({
@@ -131,6 +130,47 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
     Navigator.pop(context);
   }
 
+  Widget inputField({
+    required TextEditingController controller,
+    required String label,
+    int maxLines = 1,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      validator: (v) => v == null || v.isEmpty ? "Required" : null,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.textShade),
+        filled: true,
+        fillColor: AppColors.sectionBackground,
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget dateTile({
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.sectionBackground,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.calendar_today, color: AppColors.primary),
+        title: Text(title),
+        onTap: onTap,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -148,103 +188,160 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
         backgroundColor: AppColors.primary,
       ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
 
-        child: Form(
-          key: _formKey,
+          child: Container(
+            padding: const EdgeInsets.all(20),
 
-          child: ListView(
-            children: [
+            decoration: BoxDecoration(
+              color: AppColors.containerBackground,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0,5),
+                )
+              ],
+            ),
 
-              TextFormField(
-                controller: nameCtrl,
-                validator: (v) => v!.isEmpty ? "Required" : null,
-                decoration: const InputDecoration(
-                  labelText: "Medicine Name",
-                ),
-              ),
+            child: Form(
+              key: _formKey,
 
-              const SizedBox(height: 16),
+              child: ListView(
+                children: [
 
-              TextFormField(
-                controller: dosageCtrl,
-                validator: (v) => v!.isEmpty ? "Required" : null,
-                decoration: const InputDecoration(
-                  labelText: "Dosage",
-                ),
-              ),
+                  inputField(
+                    controller: nameCtrl,
+                    label: "Medicine Name",
+                  ),
 
-              const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-              TextFormField(
-                controller: instructionsCtrl,
-                validator: (v) => v!.isEmpty ? "Required" : null,
-                decoration: const InputDecoration(
-                  labelText: "Instructions",
-                ),
-              ),
+                  inputField(
+                    controller: dosageCtrl,
+                    label: "Dosage",
+                  ),
 
-              const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-              ElevatedButton(
-                onPressed: pickTime,
-                child: Text(
-                  times.isEmpty
-                      ? "Select Time"
-                      : "Time: ${times.first}",
-                ),
-              ),
+                  inputField(
+                    controller: instructionsCtrl,
+                    label: "Instructions",
+                    maxLines: 3,
+                  ),
 
-              const SizedBox(height: 10),
+                  const SizedBox(height: 24),
 
-              ElevatedButton(
-                onPressed: () => pickDate(true),
-                child: Text(
-                  startDate == null
-                      ? "Start Date"
-                      : DateFormat('yyyy-MM-dd').format(startDate!),
-                ),
-              ),
+                  const Text(
+                    "Reminder Time",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryText,
+                    ),
+                  ),
 
-              const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-              ElevatedButton(
-                onPressed: () => pickDate(false),
-                child: Text(
-                  endDate == null
-                      ? "End Date"
-                      : DateFormat('yyyy-MM-dd').format(endDate!),
-                ),
-              ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    onPressed: pickTime,
+                    icon: const Icon(Icons.access_time, color: Colors.white),
+                    label: Text(
+                      times.isEmpty
+                          ? "Select Time"
+                          : "Time: ${times.first}",
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
 
-              const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-              DropdownButtonFormField(
-                value: repeatDays,
-                items: const [
-                  DropdownMenuItem(value: "Daily", child: Text("Daily")),
-                  DropdownMenuItem(
-                      value: "EveryOtherDay",
-                      child: Text("Every Other Day")),
+                  const Text(
+                    "Duration",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryText,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  dateTile(
+                    title: startDate == null
+                        ? "Select Start Date"
+                        : DateFormat('yyyy-MM-dd').format(startDate!),
+                    onTap: () => pickDate(true),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  dateTile(
+                    title: endDate == null
+                        ? "Select End Date"
+                        : DateFormat('yyyy-MM-dd').format(endDate!),
+                    onTap: () => pickDate(false),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  DropdownButtonFormField(
+                    value: repeatDays,
+                    items: const [
+                      DropdownMenuItem(value: "Daily", child: Text("Daily")),
+                      DropdownMenuItem(
+                          value: "EveryOtherDay",
+                          child: Text("Every Other Day")),
+                    ],
+                    onChanged: (v) {
+                      repeatDays = v.toString();
+                    },
+                    decoration: InputDecoration(
+                      labelText: "Repeat",
+                      filled: true,
+                      fillColor: AppColors.sectionBackground,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding:
+                        const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: saving ? null : updateMedicine,
+                      child: saving
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                        "Update Medicine",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
-                onChanged: (v) {
-                  repeatDays = v.toString();
-                },
-                decoration: const InputDecoration(
-                  labelText: "Repeat",
-                ),
               ),
-
-              const SizedBox(height: 30),
-
-              ElevatedButton(
-                onPressed: saving ? null : updateMedicine,
-                child: saving
-                    ? const CircularProgressIndicator()
-                    : const Text("Update Medicine"),
-              ),
-            ],
+            ),
           ),
         ),
       ),
