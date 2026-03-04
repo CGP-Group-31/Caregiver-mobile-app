@@ -168,7 +168,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ----- UI helpers -----
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(6, 14, 6, 10),
@@ -289,7 +288,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ACCOUNT
               _sectionTitle("Account"),
               _settingsCard(
                 children: [
@@ -302,7 +300,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
 
-              // SUPPORT
               _sectionTitle("Support"),
               _settingsCard(
                 children: [
@@ -322,7 +319,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
 
-              // SESSION
               _sectionTitle("Session"),
               _settingsCard(
                 children: [
