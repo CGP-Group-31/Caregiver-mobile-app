@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../core/session/session_manager.dart';
 import '../../features/auth/theme.dart';
 import '../auth/login_screen.dart';
-
 import 'caregiver_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -13,8 +12,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool locationTrackingEnabled = true;
-
   Future<void> _logout(BuildContext context) async {
     await SessionManager.logout();
     if (!context.mounted) return;
@@ -97,11 +94,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         content: SingleChildScrollView(
           child: Text(
-            "This is a placeholder privacy policy.\n\n"
-                "• We only collect the minimum data needed to provide app features.\n"
-                "• Device info and notification tokens may be stored for alerts.\n"
-                "• Location tracking (if enabled) is used only for safety features.\n\n"
-                "Replace this text with your real privacy policy content.",
+            "TrustCare collects only what is needed to provide caregiving features "
+                "(caregiver/elder details, medical info, reminders, and safety alerts). "
+                "Data is used only for app functionality and is not sold for marketing.\n\n"
+                "TrustCare does not provide medical advice and is not a replacement for professional care.",
             style: TextStyle(
               color: AppColors.primaryText.withValues(alpha: 0.78),
               height: 1.35,
@@ -140,10 +136,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         content: Text(
           "TrustCare — Caregiver App\n\n"
-              "Version: 1.0.0 (demo)\n\n"
-              "This app helps caregivers monitor elder safety with reminders, alerts, "
-              "and emergency support.\n\n"
-              "Replace this text with your real app details.",
+              "A companion app to help caregivers manage elder medical info, reminders, "
+              "and receive safety alerts.\n\n"
+              "Version: 1.0.0",
           style: TextStyle(
             color: AppColors.primaryText.withValues(alpha: 0.78),
             height: 1.35,
@@ -166,58 +161,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _openPermissionsDialog() async {
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setLocal) {
-            return AlertDialog(
-              backgroundColor: AppColors.containerBackground,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              title: const Text(
-                "Permissions",
-                style: TextStyle(
-                  color: AppColors.primaryText,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _permissionToggleRow(
-                    title: "Location Tracking",
-                    subtitle: "Enable location tracking for safety features",
-                    value: locationTrackingEnabled,
-                    onChanged: (v) {
-                      setLocal(() => locationTrackingEnabled = v);
-                      setState(() => locationTrackingEnabled = v);
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text(
-                    "Close",
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+  void _goToProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CaregiverProfileScreen()),
     );
   }
 
-  // ----- UI helpers -----
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(6, 14, 6, 10),
@@ -319,80 +269,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _permissionToggleRow({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.sectionBackground.withValues(alpha: 0.28),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.textShade.withValues(alpha: 0.18),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.location_on_rounded,
-              color: AppColors.primary.withValues(alpha: 0.95),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppColors.primaryText,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14.6,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: AppColors.descriptionText.withValues(alpha: 0.95),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            activeThumbColor: AppColors.primary,
-            activeTrackColor: AppColors.primary.withValues(alpha: 0.25),
-            inactiveThumbColor: AppColors.textShade,
-            inactiveTrackColor: AppColors.textShade.withValues(alpha: 0.25),
-            onChanged: onChanged,
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _goToProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const CaregiverProfileScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -412,7 +288,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ACCOUNT
               _sectionTitle("Account"),
               _settingsCard(
                 children: [
@@ -420,21 +295,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.person_rounded,
                     title: "Profile",
                     subtitle: "View and edit caregiver details",
-                    onTap: _goToProfile, // ✅ now linked
-                  ),
-                  _divider(),
-
-                  // Permissions tile opens dialog (Location Tracking is inside)
-                  _tile(
-                    icon: Icons.verified_user_rounded,
-                    title: "Permissions",
-                    subtitle: "Manage app access permissions",
-                    onTap: _openPermissionsDialog,
+                    onTap: _goToProfile,
                   ),
                 ],
               ),
 
-              // SUPPORT
               _sectionTitle("Support"),
               _settingsCard(
                 children: [
@@ -454,7 +319,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
 
-              // SESSION
               _sectionTitle("Session"),
               _settingsCard(
                 children: [

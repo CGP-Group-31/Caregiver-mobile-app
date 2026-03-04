@@ -5,7 +5,8 @@ import '../elder/medical_record_screen.dart';
 import 'theme.dart';
 import '../elder/health_details_page.dart';
 class ElderProfileScreen extends StatefulWidget {
-  const ElderProfileScreen({super.key});
+  final VoidCallback? onBackToHome;
+  const ElderProfileScreen({super.key, this.onBackToHome});
 
   @override
   State<ElderProfileScreen> createState() => _ElderProfileScreenState();
@@ -96,7 +97,11 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                     elevation: 0,
                     leading: IconButton(
                       icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primaryText, size: 20),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        if (widget.onBackToHome != null){
+                          widget.onBackToHome!();
+                        }
+                      },
                     ),
                     centerTitle: true,
                     title: const Text(
