@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-
 import '../../core/session/session_manager.dart';
 import '../../core/network/dio_client.dart';
 import '../../features/auth/theme.dart';
@@ -16,7 +15,6 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
   bool loading = true;
   String? error;
 
-  // Fetched data
   String fullName = "";
   String email = "";
   String phone = "";
@@ -51,9 +49,7 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
         queryParameters: {"caregiver_id": caregiverId},
       );
 
-      final data = (res.data is Map)
-          ? (res.data as Map<String, dynamic>)
-          : <String, dynamic>{};
+      final data = res.data as Map<String, dynamic>;
 
       setState(() {
         fullName = (data["FullName"] ?? data["full_name"] ?? "").toString();
@@ -65,7 +61,7 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
         loading = false;
       });
     } on DioException catch (e) {
-      final msg = (e.response?.data is Map && e.response?.data["detail"] != null)
+      final msg = (e.response?.data is Map && (e.response?.data["detail"] != null))
           ? e.response?.data["detail"].toString()
           : "Failed to load profile";
       setState(() {
@@ -80,285 +76,339 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
     }
   }
 
-  // ---------- EDIT POPUP ----------
-  Future<void> _openEditSheet() async {
-    final caregiverId = await SessionManager.getUserId();
-    if (caregiverId == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No caregiver session found. Please login again.")),
-      );
-      return;
+  Future<Response<dynamic>> _tryUpdate({
+    required int caregiverId,
+    required Map<String, dynamic> payload,
+  }) async {
+    final base1 = "/api/v1/caregiver/caregiver-profile/$caregiverId";
+    final base2 = "/api/v1/caregiver/caregiver-profile/$caregiverId/";
+    final methods = ["PATCH", "PUT", "POST"];
+
+    DioException? last405;
+
+    for (final url in [base1, base2]) {
+      for (final m in methods) {
+        try {
+          final res = await DioClient.dio.request(
+            url,
+            data: payload,
+            options: Options(method: m),
+          );
+          return res;
+        } on DioException catch (e) {
+          final code = e.response?.statusCode;
+          if (code == 405) {
+            last405 = e;
+            continue;
+          }
+          rethrow;
+        }
+      }
     }
 
+    throw last405 ??
+        DioException(
+          requestOptions: RequestOptions(path: base1),
+          error: "Method not allowed",
+          response: Response(
+            requestOptions: RequestOptions(path: base1),
+            statusCode: 405,
+          ),
+        );
+  }
+
+  Future<void> _openEditDialog() async {
     final phoneCtrl = TextEditingController(text: phone);
     final emailCtrl = TextEditingController(text: email);
     final addressCtrl = TextEditingController(text: address);
 
-    final formKey = GlobalKey<FormState>();
-    bool saving = false;
-    String? apiError;
-
-    String? emailValidator(String? v) {
-      final value = (v ?? "").trim();
-      if (value.isEmpty) return "Email is required";
-      if (!RegExp(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").hasMatch(value)) {
-        return "Enter a valid email";
-      }
-      return null;
-    }
-
-    String? phoneValidator(String? v) {
-      final value = (v ?? "").trim();
-      if (value.isEmpty) return "Phone is required";
-      final digits = value.replaceAll(RegExp(r"\D"), "");
-      if (digits.length < 9 || digits.length > 15) {
-        return "Enter a valid phone number";
-      }
-      return null;
-    }
-
-    String? addressValidator(String? v) {
-      final value = (v ?? "").trim();
-      if (value.isEmpty) return "Address is required";
-      if (value.length < 5) return "Address is too short";
-      if (value.length > 180) return "Address is too long";
-      return null;
-    }
-
-    await showModalBottomSheet(
+    await showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.containerBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
+      barrierDismissible: false,
       builder: (ctx) {
+        bool localSaving = false;
+        String? localError;
+        bool localSuccess = false;
+
+        InputDecoration decor(String label, {IconData? icon}) {
+          return InputDecoration(
+            labelText: label,
+            filled: true,
+            fillColor: AppColors.containerBackground,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            prefixIcon: icon != null
+                ? Icon(icon, color: AppColors.primary.withValues(alpha: 0.9))
+                : null,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: AppColors.textShade.withValues(alpha: 0.22),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+            ),
+          );
+        }
+
         return StatefulBuilder(
           builder: (ctx, setLocal) {
             Future<void> save() async {
               FocusScope.of(ctx).unfocus();
-              apiError = null;
 
-              final ok = formKey.currentState?.validate() ?? false;
-              if (!ok) {
-                setLocal(() {});
+              final p = phoneCtrl.text.trim();
+              final e = emailCtrl.text.trim();
+              final a = addressCtrl.text.trim();
+
+              if (p.isEmpty) {
+                setLocal(() => localError = "Phone is required");
                 return;
               }
 
-              setLocal(() => saving = true);
+              final digits = p.replaceAll(RegExp(r"\D"), "");
+              if (digits.length < 9 || digits.length > 15) {
+                setLocal(() => localError = "Enter a valid phone number");
+                return;
+              }
+
+              if (e.isEmpty) {
+                setLocal(() => localError = "Email is required");
+                return;
+              }
+
+              if (!RegExp(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").hasMatch(e)) {
+                setLocal(() => localError = "Enter a valid email");
+                return;
+              }
+
+              if (a.isNotEmpty && a.length > 140) {
+                setLocal(() => localError = "Address is too long (max 140)");
+                return;
+              }
+
+              setLocal(() {
+                localError = null;
+                localSaving = true;
+              });
 
               try {
-                // ✅ Update API (password + full_name ignored)
-                await DioClient.dio.put(
-                  "/api/v1/caregiver/caregiver-profile/$caregiverId",
-                  data: {
-                    "phone": phoneCtrl.text.trim(),
-                    "address": addressCtrl.text.trim(),
-                    "email": emailCtrl.text.trim(),
-                  },
+                final caregiverId = await SessionManager.getUserId();
+                if (caregiverId == null) {
+                  setLocal(() {
+                    localSaving = false;
+                    localError = "Session expired. Please login again.";
+                  });
+                  return;
+                }
+
+                final payload = {
+                  "phone": p,
+                  "address": a,
+                  "email": e,
+                };
+
+                await _tryUpdate(
+                  caregiverId: caregiverId,
+                  payload: payload,
                 );
 
-                // Update UI immediately
                 if (!mounted) return;
+
                 setState(() {
-                  phone = phoneCtrl.text.trim();
-                  address = addressCtrl.text.trim();
-                  email = emailCtrl.text.trim();
+                  phone = p;
+                  address = a;
+                  email = e;
                 });
 
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Profile updated successfully")),
-                );
-              } on DioException catch (e) {
-                final detail = (e.response?.data is Map && e.response?.data["detail"] != null)
-                    ? e.response?.data["detail"].toString()
-                    : "Failed to update profile";
                 setLocal(() {
-                  apiError = detail;
-                  saving = false;
+                  localSaving = false;
+                  localSuccess = true;
+                });
+              } on DioException catch (ex) {
+                final code = ex.response?.statusCode;
+
+                String msg = "Update failed. Please try again.";
+
+                if (ex.response?.data is Map && ex.response?.data["detail"] != null) {
+                  msg = ex.response!.data["detail"].toString();
+                } else if (code == 405) {
+                  msg = "Update method is not enabled in backend yet.";
+                }
+
+                setLocal(() {
+                  localSaving = false;
+                  localError = msg;
                 });
               } catch (_) {
                 setLocal(() {
-                  apiError = "Something went wrong";
-                  saving = false;
+                  localSaving = false;
+                  localError = "Something went wrong. Please try again.";
                 });
               }
             }
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 14,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
+            return AlertDialog(
+              backgroundColor: AppColors.containerBackground,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              title: const Text(
+                "Edit Profile",
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: AppColors.textShade.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  const Text(
-                    "Edit Profile",
-                    style: TextStyle(
-                      color: AppColors.primaryText,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  if (apiError != null) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.emergencyBackground.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: AppColors.sosButton.withValues(alpha: 0.35),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (localSuccess) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.sectionBackground.withValues(alpha: 0.40),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.30),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle_rounded, color: AppColors.primary.withValues(alpha: 0.95)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                "Profile updated successfully",
+                                style: TextStyle(
+                                  color: AppColors.primaryText.withValues(alpha: 0.90),
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Text(
-                        apiError!,
-                        style: TextStyle(
-                          color: AppColors.sosButton.withValues(alpha: 0.95),
+                    ] else ...[
+                      TextField(
+                        controller: phoneCtrl,
+                        keyboardType: TextInputType.phone,
+                        decoration: decor("Phone", icon: Icons.call_rounded),
+                        style: const TextStyle(
+                          color: AppColors.primaryText,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-
-                  Form(
-                    key: formKey,
-                    child: Column(
-                      children: [
-                        _editField(
-                          controller: phoneCtrl,
-                          label: "Phone",
-                          keyboardType: TextInputType.phone,
-                          validator: phoneValidator,
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: decor("Email", icon: Icons.alternate_email_rounded),
+                        style: const TextStyle(
+                          color: AppColors.primaryText,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(height: 10),
-                        _editField(
-                          controller: emailCtrl,
-                          label: "Email",
-                          keyboardType: TextInputType.emailAddress,
-                          validator: emailValidator,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: addressCtrl,
+                        keyboardType: TextInputType.streetAddress,
+                        decoration: decor("Address", icon: Icons.home_rounded),
+                        style: const TextStyle(
+                          color: AppColors.primaryText,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(height: 10),
-                        _editField(
-                          controller: addressCtrl,
-                          label: "Address",
-                          keyboardType: TextInputType.streetAddress,
-                          maxLines: 2,
-                          validator: addressValidator,
+                      ),
+                      if (localError != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.emergencyBackground.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: AppColors.sosButton.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Text(
+                            localError!,
+                            style: TextStyle(
+                              color: AppColors.sosButton.withValues(alpha: 0.95),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: saving ? null : save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: saving
-                          ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                          : const Text(
-                        "Save",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 15.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                    ],
+                  ],
+                ),
               ),
+              actions: localSuccess
+                  ? [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ]
+                  : [
+                TextButton(
+                  onPressed: localSaving ? null : () => Navigator.pop(ctx),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(
+                      color: AppColors.descriptionText,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: localSaving ? null : save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: localSaving
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                      : const Text(
+                    "Save",
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ],
             );
           },
         );
       },
     );
+
+    phoneCtrl.dispose();
+    emailCtrl.dispose();
+    addressCtrl.dispose();
   }
 
-  static Widget _editField({
-    required TextEditingController controller,
-    required String label,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      validator: validator,
-      style: const TextStyle(
-        color: AppColors.primaryText,
-        fontWeight: FontWeight.w700,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          color: AppColors.descriptionText.withValues(alpha: 0.95),
-          fontWeight: FontWeight.w700,
-        ),
-        filled: true,
-        fillColor: AppColors.sectionBackground.withValues(alpha: 0.28),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: AppColors.textShade.withValues(alpha: 0.18),
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: AppColors.textShade.withValues(alpha: 0.18),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.primary,
-            width: 1.6,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ---------- UI helpers ----------
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(6, 14, 6, 10),
@@ -397,6 +447,8 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
     required String label,
     required String value,
   }) {
+    final v = value.trim().isEmpty ? "-" : value.trim();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Row(
@@ -425,7 +477,7 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  value.trim().isEmpty ? "-" : value.trim(),
+                  v,
                   style: const TextStyle(
                     color: AppColors.primaryText,
                     fontWeight: FontWeight.w900,
@@ -440,7 +492,6 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
     );
   }
 
-  // ---------- BUILD ----------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -455,8 +506,7 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: "Edit",
-            onPressed: loading ? null : _openEditSheet,
+            onPressed: loading ? null : _openEditDialog,
             icon: const Icon(Icons.edit_rounded),
           ),
         ],
@@ -511,7 +561,6 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // HEADER
               Center(
                 child: Column(
                   children: [
@@ -543,8 +592,6 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
                   ],
                 ),
               ),
-
-              // BASIC INFO
               _sectionTitle("Basic Info"),
               _card(
                 children: [
@@ -567,14 +614,12 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
                   ),
                   _divider(),
                   _rowItem(
-                    icon: Icons.location_on_rounded,
+                    icon: Icons.home_rounded,
                     label: "Address",
                     value: address,
                   ),
                 ],
               ),
-
-              // ACCOUNT
               _sectionTitle("Account"),
               _card(
                 children: [
