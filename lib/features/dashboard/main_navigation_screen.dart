@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../auth/elder_profile.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../more/more_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget{
   const MainNavigationScreen({super.key});
@@ -20,11 +21,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context){
-    final screens = <Widget> [
+    final screens = <Widget>[
       DashboardScreen(),
       ElderProfileScreen(onBackToHome: () => _onItemTapped(0)),
       PlaceholderScreen(title: "SOS Alerts"),
-      PlaceholderScreen(title: "More"),
+      const MoreScreen(),
     ];
     return Scaffold(
       body: screens[_selectedIndex],
@@ -46,11 +47,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.notifications),
-            label: "SOS Alerts",
+            label: "Messages",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.grid_view),
-            label: "More",
+            label: "Schedule",
           ),
         ],
       ),
