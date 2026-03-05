@@ -47,11 +47,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.notifications),
-            label: "SOS Alerts",
+            label: "Messages",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.grid_view),
-            label: "More",
+            label: "Schedule",
           ),
         ],
       ),
