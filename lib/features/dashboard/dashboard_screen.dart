@@ -1,3 +1,4 @@
+import 'package:caregiver/features/auth/elder_profile.dart';
 import 'package:flutter/material.dart';
 import '../../core/session/session_manager.dart';
 import '../dashboard/app_colors.dart';
@@ -86,6 +87,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Widget _elderProfileCard(){
+    return GestureDetector(
+      onTap: (){
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ElderProfileScreen(),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.containerBg,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 24,
+              backgroundColor: AppColors.primary,
+              child: Icon(Icons.person, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    "View Elder Profile",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  Text(
+                    "Tap to see health details & reports",
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Icon(Icons.arrow_forward_ios, size: 16)
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context){
     return Scaffold(
@@ -143,6 +197,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             color: AppColors.textSecondary,
                           ),
                         ),
+
+                        const SizedBox(height: 20),
+
+                        _elderProfileCard(),
 
                         const SizedBox(height: 20),
 
