@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import '../auth/elder_profile.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../more/more_screen.dart';
+import '../schedule/schedule_screen.dart';
+import '../messages/messages_screen.dart';
+import '../alerts/alerts_screen.dart';
 
-class MainNavigationScreen extends StatefulWidget{
+class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
@@ -13,20 +16,19 @@ class MainNavigationScreen extends StatefulWidget{
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  void _onItemTapped(int index){
+  void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
   }
 
-
-
   @override
   Widget build(BuildContext context){
-    final screens = <Widget>[
-      DashboardScreen(),
-      ElderProfileScreen(onBackToHome: () => _onItemTapped(0)),
-      PlaceholderScreen(title: "SOS Alerts"),
-      const MoreScreen(),
+    final screens = <Widget> [
+      const DashboardScreen(),
+      const ScheduleScreen(),
+      const MessagesScreen(),
+      const AlertsScreen(),
     ];
+
     return Scaffold(
       body: screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
@@ -42,36 +44,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             label: "Home",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Elder Profile",
+            icon: Icon(Icons.calendar_today),
+            label: "Schedule",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
+            icon: Icon(Icons.message),
             label: "Messages",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view),
-            label: "Schedule",
+            icon: Icon(Icons.notifications),
+            label: "Alerts",
           ),
         ],
-      ),
-    );
-  }
-}
-
-class PlaceholderScreen extends StatelessWidget {
-  final String title;
-
-  const PlaceholderScreen({super.key, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Text(
-          title,
-          style: const TextStyle(fontSize: 20),
-        ),
       ),
     );
   }
