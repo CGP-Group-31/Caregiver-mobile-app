@@ -26,7 +26,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       const DashboardScreen(),
       const ScheduleScreen(),
       const MessagesScreen(),
-      const AlertsScreen(),
+      ElderProfileScreen(onBackToHome: () => _onItemTapped(0)),
     ];
 
     return Scaffold(
@@ -52,8 +52,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             label: "Messages",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: "Alerts",
+            icon: Icon(Icons.person),
+            label: "Elder Profile",
           ),
         ],
       ),
