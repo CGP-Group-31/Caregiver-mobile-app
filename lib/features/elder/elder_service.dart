@@ -27,4 +27,21 @@ class ElderService {
       throw Exception('Failed to load medical profile: ${e.response?.statusCode}');
     }
   }
+
+  static Future<void> patchElderDetails({
+    required int elderId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      // Try plural first
+      await DioClient.dio.patch('/api/v1/caregiver/elders/$elderId', data: data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        // Fallback to singular
+        await DioClient.dio.patch('/api/v1/caregiver/elder/$elderId', data: data);
+      } else {
+        throw Exception('Failed to update elder: ${e.response?.statusCode}');
+      }
+    }
+  }
 }

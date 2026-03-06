@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../elder/elder_model.dart';
 import '../elder/elder_service.dart';
-import '../elder/medical_record_screen.dart';
-import 'theme.dart';
 import '../elder/health_details_page.dart';
+import '../elder/weekly_reports_page.dart';
+import '../elder/location_page.dart';
+import '../elder/edit_elder_profile_screen.dart';
+import 'theme.dart';
+
 class ElderProfileScreen extends StatefulWidget {
   final VoidCallback? onBackToHome;
   const ElderProfileScreen({super.key, this.onBackToHome});
@@ -22,7 +25,9 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
   }
 
   void _loadData() {
-    _elderDetailsFuture = ElderService.getElderDetails();
+    setState(() {
+      _elderDetailsFuture = ElderService.getElderDetails();
+    });
   }
 
   int _calculateAge(String dob) {
@@ -67,7 +72,7 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
-                      onPressed: () => setState(_loadData),
+                      onPressed: _loadData,
                       style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                       child: const Text("Retry", style: TextStyle(color: Colors.white)),
                     )
@@ -120,48 +125,37 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 20),
-                          _buildPremiumProfileCard(elder),
+                          
+                          /// SECTION A - Elder Summary
+                          _buildElderSummaryCard(elder),
+                          
                           const SizedBox(height: 40),
-                          _buildPremiumNavTile(
-                            context,
-                            title: "Health Details",   //visha kiwwa name ke change wenawa kiyala
-                            description: "Vitals, History & Meds",
+                          
+                          /// SECTION B - Three Button Cards
+                          _buildNavCard(
+                            title: "Health Details",
+                            description: "Vitals & Medical History",
                             icon: Icons.favorite_outline_rounded,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const MedicalRecordScreen()),
-                              );
-                            },
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HealthDetailsPage())),
                           ),
-                          _buildPremiumNavTile(
-                            context,
+                          
+                          _buildNavCard(
                             title: "Weekly Reports",
                             description: "AI Health Analysis",
                             icon: Icons.auto_graph_rounded,
-                            onTap: () {},
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WeeklyReportsPage())),
                           ),
-                          _buildPremiumNavTile(
-                            context,
+                          
+                          _buildNavCard(
                             title: "Location",
                             description: "Live Tracking & History",
                             icon: Icons.near_me_outlined,
-                            onTap: () {},
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LocationPage())),
                           ),
-                          _buildPremiumNavTile(
-                            context,
-                            title: "Health Details",
-                            description: "Vitals, History & Meds",
-                            icon: Icons.favorite_outline_rounded,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const HealthDetailsPage()),
-                              );
-                            },
-                          ),
+                          
                           const SizedBox(height: 50),
                         ],
                       ),
@@ -176,7 +170,7 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
     );
   }
 
-  Widget _buildPremiumProfileCard(ElderModel elder) {
+  Widget _buildElderSummaryCard(ElderModel elder) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -214,18 +208,12 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.primaryText),
           ),
           const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.mainBackground,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              "${elder.gender} • ${_calculateAge(elder.dateOfBirth)} Years",
-              style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
-            ),
+          Text(
+            "${elder.gender} • ${_calculateAge(elder.dateOfBirth)} Years",
+            style: const TextStyle(color: AppColors.descriptionText, fontSize: 14, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 20),
+          
           Container(
             padding: const EdgeInsets.all(20),
             decoration: const BoxDecoration(
@@ -235,19 +223,49 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                 bottomRight: Radius.circular(32),
               ),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    elder.address,
-                    style: const TextStyle(color: AppColors.descriptionText, fontSize: 13),
-                  ),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        elder.address,
+                        style: const TextStyle(color: AppColors.descriptionText, fontSize: 13),
+                      ),
+                    ),
+                  ],
                 ),
-                const Text(
-                  "EDIT",
-                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.family_restroom_rounded, color: AppColors.primary, size: 20),
+                        const SizedBox(width: 12),
+                        Text(
+                          "Relationship: ${elder.relationship}", 
+                          style: const TextStyle(color: AppColors.descriptionText, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                    GestureDetector(
+                      onTap: () async {
+                        final updated = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => EditElderProfileScreen(elder: elder)),
+                        );
+                        if (updated == true) _loadData();
+                      },
+                      child: const Text(
+                        "EDIT",
+                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -257,8 +275,12 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
     );
   }
 
-  Widget _buildPremiumNavTile(BuildContext context,
-      {required String title, required String description, required IconData icon, required VoidCallback onTap}) {
+  Widget _buildNavCard({
+    required String title,
+    required String description,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: InkWell(
