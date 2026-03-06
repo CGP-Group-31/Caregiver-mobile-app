@@ -100,6 +100,8 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                       onPressed: () {
                         if (widget.onBackToHome != null){
                           widget.onBackToHome!();
+                        } else if (Navigator.canPop(context)){
+                          Navigator.pop(context);
                         }
                       },
                     ),
