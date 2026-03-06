@@ -4,6 +4,8 @@ import '../elder/elder_service.dart';
 import '../elder/medical_record_screen.dart';
 import 'theme.dart';
 import '../elder/health_details_page.dart';
+import '../location/caregiver_view_location.dart';
+
 class ElderProfileScreen extends StatefulWidget {
   final VoidCallback? onBackToHome;
   const ElderProfileScreen({super.key, this.onBackToHome});
@@ -146,7 +148,14 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                             title: "Location",
                             description: "Live Tracking & History",
                             icon: Icons.near_me_outlined,
-                            onTap: () {},
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const CaregiverViewLocation(),
+                                ),
+                              );
+                            },
                           ),
                           _buildPremiumNavTile(
                             context,
