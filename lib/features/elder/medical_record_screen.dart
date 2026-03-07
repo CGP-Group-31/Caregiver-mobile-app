@@ -25,7 +25,7 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text("Health Details", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Medical Background", style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _medicalProfileFuture,
@@ -57,6 +57,7 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
           final data = snapshot.data ?? {};
 
+          // Flexible key mapping (no decryption)
           String getValue(List<String> keys) {
             for (var key in keys) {
               if (data.containsKey(key) && data[key] != null && data[key].toString().isNotEmpty) {
@@ -86,28 +87,13 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: AppColors.primary.withOpacity(0.1))),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: AppColors.primary.withOpacity(0.1),
-            child: Icon(icon, color: AppColors.primary),
-          ),
-          title: Text(title, style: const TextStyle(fontSize: 14, color: AppColors.descriptionText, fontWeight: FontWeight.w500)),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 15, 
-                fontWeight: FontWeight.bold, 
-                color: AppColors.primaryText,
-                // If it looks like base64/encrypted, use a different font or style
-                fontFamily: value.length > 30 ? 'monospace' : null,
-              ),
-            ),
-          ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: AppColors.primary.withOpacity(0.1),
+          child: Icon(icon, color: AppColors.primary),
         ),
+        title: Text(title, style: const TextStyle(fontSize: 14, color: AppColors.descriptionText)),
+        subtitle: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryText)),
       ),
     );
   }
