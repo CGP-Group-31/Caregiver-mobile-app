@@ -117,78 +117,91 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
         );
   }
 
-  Future<void> _openEditDialog() async {
+  Future<void> _openEditSheet() async {
+    final formKey = GlobalKey<FormState>();
     final phoneCtrl = TextEditingController(text: phone);
     final emailCtrl = TextEditingController(text: email);
     final addressCtrl = TextEditingController(text: address);
 
-    await showDialog<void>(
+    await showModalBottomSheet<void>(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
         bool localSaving = false;
-        String? localError;
         bool localSuccess = false;
+        String? submitError;
 
         InputDecoration decor(String label, {IconData? icon}) {
           return InputDecoration(
             labelText: label,
+            labelStyle: const TextStyle(
+              color: AppColors.descriptionText,
+              fontWeight: FontWeight.w700,
+            ),
             filled: true,
             fillColor: AppColors.containerBackground,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             prefixIcon: icon != null
-                ? Icon(icon, color: AppColors.primary.withValues(alpha: 0.9))
+                ? Icon(icon, color: AppColors.primary.withValues(alpha: 0.95))
                 : null,
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide(
-                color: AppColors.textShade.withValues(alpha: 0.22),
+                color: AppColors.textShade.withValues(alpha: 0.18),
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+              borderRadius: BorderRadius.circular(18),
+              borderSide: const BorderSide(
+                color: AppColors.primary,
+                width: 1.6,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: const BorderSide(
+                color: Colors.redAccent,
+                width: 1.1,
+              ),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: const BorderSide(
+                color: Colors.redAccent,
+                width: 1.6,
+              ),
+            ),
+            errorStyle: const TextStyle(
+              color: Colors.redAccent,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.2,
             ),
           );
+        }
+
+        Future<void> closeSheet(BuildContext ctx) async {
+          FocusManager.instance.primaryFocus?.unfocus();
+          await Future.delayed(const Duration(milliseconds: 80));
+          if (ctx.mounted) {
+            Navigator.of(ctx).pop();
+          }
         }
 
         return StatefulBuilder(
           builder: (ctx, setLocal) {
             Future<void> save() async {
-              FocusScope.of(ctx).unfocus();
+              FocusManager.instance.primaryFocus?.unfocus();
+
+              final valid = formKey.currentState?.validate() ?? false;
+              if (!valid) return;
 
               final p = phoneCtrl.text.trim();
               final e = emailCtrl.text.trim();
               final a = addressCtrl.text.trim();
 
-              if (p.isEmpty) {
-                setLocal(() => localError = "Phone is required");
-                return;
-              }
-
-              final digits = p.replaceAll(RegExp(r"\D"), "");
-              if (digits.length < 9 || digits.length > 15) {
-                setLocal(() => localError = "Enter a valid phone number");
-                return;
-              }
-
-              if (e.isEmpty) {
-                setLocal(() => localError = "Email is required");
-                return;
-              }
-
-              if (!RegExp(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").hasMatch(e)) {
-                setLocal(() => localError = "Enter a valid email");
-                return;
-              }
-
-              if (a.isNotEmpty && a.length > 140) {
-                setLocal(() => localError = "Address is too long (max 140)");
-                return;
-              }
-
               setLocal(() {
-                localError = null;
+                submitError = null;
                 localSaving = true;
               });
 
@@ -197,7 +210,7 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
                 if (caregiverId == null) {
                   setLocal(() {
                     localSaving = false;
-                    localError = "Session expired. Please login again.";
+                    submitError = "Session expired. Please login again.";
                   });
                   return;
                 }
@@ -227,7 +240,6 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
                 });
               } on DioException catch (ex) {
                 final code = ex.response?.statusCode;
-
                 String msg = "Update failed. Please try again.";
 
                 if (ex.response?.data is Map && ex.response?.data["detail"] != null) {
@@ -238,166 +250,305 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
 
                 setLocal(() {
                   localSaving = false;
-                  localError = msg;
+                  submitError = msg;
                 });
               } catch (_) {
                 setLocal(() {
                   localSaving = false;
-                  localError = "Something went wrong. Please try again.";
+                  submitError = "Something went wrong. Please try again.";
                 });
               }
             }
 
-            return AlertDialog(
-              backgroundColor: AppColors.containerBackground,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              title: const Text(
-                "Edit Profile",
-                style: TextStyle(
-                  color: AppColors.primaryText,
-                  fontWeight: FontWeight.w900,
-                ),
+            return AnimatedPadding(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
               ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (localSuccess) ...[
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.sectionBackground.withValues(alpha: 0.40),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.30),
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: AppColors.mainBackground,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(18, 14, 18, 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: AppColors.textShade.withValues(alpha: 0.28),
+                            borderRadius: BorderRadius.circular(99),
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.check_circle_rounded, color: AppColors.primary.withValues(alpha: 0.95)),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                "Profile updated successfully",
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+                          decoration: BoxDecoration(
+                            color: AppColors.sectionBackground.withValues(alpha: 0.32),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: AppColors.textShade.withValues(alpha: 0.16),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 18,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: localSuccess
+                              ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  color: AppColors.containerBackground,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.05),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: AppColors.primary,
+                                  size: 40,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              const Text(
+                                "Profile Updated",
                                 style: TextStyle(
-                                  color: AppColors.primaryText.withValues(alpha: 0.90),
+                                  color: AppColors.primaryText,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ] else ...[
-                      TextField(
-                        controller: phoneCtrl,
-                        keyboardType: TextInputType.phone,
-                        decoration: decor("Phone", icon: Icons.call_rounded),
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: emailCtrl,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: decor("Email", icon: Icons.alternate_email_rounded),
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: addressCtrl,
-                        keyboardType: TextInputType.streetAddress,
-                        decoration: decor("Address", icon: Icons.home_rounded),
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      if (localError != null) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.emergencyBackground.withValues(alpha: 0.85),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: AppColors.sosButton.withValues(alpha: 0.25),
-                            ),
-                          ),
-                          child: Text(
-                            localError!,
-                            style: TextStyle(
-                              color: AppColors.sosButton.withValues(alpha: 0.95),
-                              fontWeight: FontWeight.w800,
+                              const SizedBox(height: 8),
+                              Text(
+                                "Your caregiver profile details were updated successfully.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppColors.descriptionText.withValues(alpha: 0.96),
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.35,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: ElevatedButton(
+                                  onPressed: () => closeSheet(ctx),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    "Done",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 15.6,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                              : Form(
+                            key: formKey,
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Edit Profile",
+                                  style: TextStyle(
+                                    color: AppColors.primaryText,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  "Update your contact details below.",
+                                  style: TextStyle(
+                                    color: AppColors.descriptionText.withValues(alpha: 0.96),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 18),
+                                TextFormField(
+                                  controller: phoneCtrl,
+                                  keyboardType: TextInputType.phone,
+                                  decoration: decor("Phone", icon: Icons.call_rounded),
+                                  style: const TextStyle(
+                                    color: AppColors.primaryText,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  validator: (v) {
+                                    final value = (v ?? "").trim();
+                                    if (value.isEmpty) return "Phone is required";
+                                    if (!RegExp(r"^\d{10}$").hasMatch(value)) {
+                                      return "Phone must be exactly 10 digits";
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 14),
+                                TextFormField(
+                                  controller: emailCtrl,
+                                  keyboardType: TextInputType.emailAddress,
+                                  decoration: decor("Email", icon: Icons.alternate_email_rounded),
+                                  style: const TextStyle(
+                                    color: AppColors.primaryText,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  validator: (v) {
+                                    final value = (v ?? "").trim();
+                                    if (value.isEmpty) return "Email is required";
+                                    if (!RegExp(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").hasMatch(value)) {
+                                      return "Enter a valid email";
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 14),
+                                TextFormField(
+                                  controller: addressCtrl,
+                                  keyboardType: TextInputType.streetAddress,
+                                  decoration: decor("Address", icon: Icons.home_rounded),
+                                  style: const TextStyle(
+                                    color: AppColors.primaryText,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  validator: (v) {
+                                    final value = (v ?? "").trim();
+                                    if (value.length > 140) {
+                                      return "Address is too long (max 140 characters)";
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                if (submitError != null) ...[
+                                  const SizedBox(height: 14),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(13),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.emergencyBackground.withValues(alpha: 0.90),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: AppColors.sosButton.withValues(alpha: 0.22),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(
+                                          Icons.error_outline_rounded,
+                                          color: AppColors.sosButton.withValues(alpha: 0.95),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            submitError!,
+                                            style: TextStyle(
+                                              color: AppColors.sosButton.withValues(alpha: 0.98),
+                                              fontWeight: FontWeight.w800,
+                                              height: 1.3,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 18),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: localSaving ? null : () => closeSheet(ctx),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppColors.primaryText,
+                                          side: BorderSide(
+                                            color: AppColors.textShade.withValues(alpha: 0.22),
+                                          ),
+                                          backgroundColor: AppColors.containerBackground,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(vertical: 15),
+                                        ),
+                                        child: const Text(
+                                          "Cancel",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 15.2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: localSaving ? null : save,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.primary,
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(vertical: 15),
+                                        ),
+                                        child: localSaving
+                                            ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                            : const Text(
+                                          "Save Changes",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 15.2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
               ),
-              actions: localSuccess
-                  ? [
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    "OK",
-                    style: TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                ),
-              ]
-                  : [
-                TextButton(
-                  onPressed: localSaving ? null : () => Navigator.pop(ctx),
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(
-                      color: AppColors.descriptionText,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: localSaving ? null : save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: localSaving
-                      ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                      : const Text(
-                    "Save",
-                    style: TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                ),
-              ],
             );
           },
         );
@@ -506,7 +657,7 @@ class _CaregiverProfileScreenState extends State<CaregiverProfileScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: loading ? null : _openEditDialog,
+            onPressed: loading ? null : _openEditSheet,
             icon: const Icon(Icons.edit_rounded),
           ),
         ],
