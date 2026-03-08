@@ -1,250 +1,113 @@
 import 'package:flutter/material.dart';
 import '../auth/theme.dart';
-import 'vitals_show_page.dart';
-import 'vitals_add_page.dart';
+import 'elder_service.dart';
 
-class HealthDetailsPage extends StatelessWidget {
+class HealthDetailsPage extends StatefulWidget {
   const HealthDetailsPage({super.key});
 
-  void _open(BuildContext context, Widget page) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => page),
-    );
-  }
-
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.mainBackground,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        title: const Text("Health Details"),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const _SectionTitle(
-            title: "Vitals",
-            subtitle: "Track and review health measurements",
-          ),
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              Expanded(
-                child: _ActionCard(
-                  title: "View Vitals",
-                  subtitle: "Last 3 per category",
-                  icon: Icons.monitor_heart_rounded,
-                  bg: AppColors.containerBackground,
-                  onTap: () => _open(context, const VitalsShowPage()),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _ActionCard(
-                  title: "Add Vitals",
-                  subtitle: "Record a new value",
-                  icon: Icons.add_chart_rounded,
-                  bg: AppColors.containerBackground,
-                  onTap: () => _open(context, const VitalsAddPage()),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          const _SectionTitle(
-            title: "Coming soon",
-            subtitle: "Add more health data modules here",
-          ),
-          const SizedBox(height: 12),
-
-          _DisabledCard(
-            title: "Allergies",
-            subtitle: "Save allergies & reactions",
-            icon: Icons.warning_amber_rounded,
-          ),
-          const SizedBox(height: 10),
-          _DisabledCard(
-            title: "Medical Conditions",
-            subtitle: "Chronic conditions & history",
-            icon: Icons.medical_information_rounded,
-          ),
-          const SizedBox(height: 10),
-          _DisabledCard(
-            title: "Reports / Documents",
-            subtitle: "Upload lab reports & files",
-            icon: Icons.folder_rounded,
-          ),
-        ],
-      ),
-    );
-  }
+  State<HealthDetailsPage> createState() => _HealthDetailsPageState();
 }
 
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  final String subtitle;
+class _HealthDetailsPageState extends State<HealthDetailsPage> {
+  late Future<Map<String, dynamic>> _medicalProfileFuture;
+  late Future<Map<String, dynamic>> _preferredDoctorFuture;
 
-  const _SectionTitle({required this.title, required this.subtitle});
+  @override
+  void initState() {
+    super.initState();
+    _medicalProfileFuture = ElderService.getMedicalProfile();
+    _preferredDoctorFuture = ElderService.getPreferredDoctor();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: AppColors.primaryText,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.mainBackground,
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          title: const Text("Health Details", style: TextStyle(fontWeight: FontWeight.bold)),
+          bottom: const TabBar(
+            indicatorColor: Colors.white,
+            tabs: [
+              Tab(text: "Vitals"),
+              Tab(text: "Medical History"),
+            ],
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            fontSize: 13,
-            color: AppColors.descriptionText,
-          ),
+        body: FutureBuilder(
+          future: Future.wait([_medicalProfileFuture, _preferredDoctorFuture]),
+          builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            }
+
+            if (snapshot.hasError) {
+              return Center(child: Text("Error: ${snapshot.error}"));
+            }
+
+            final medicalData = snapshot.data?[0] ?? {};
+            final doctorData = snapshot.data?[1] ?? {};
+
+            return TabBarView(
+              children: [
+                _buildVitalsTab(medicalData),
+                _buildMedicalHistoryTab(medicalData, doctorData),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVitalsTab(Map<String, dynamic> data) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildEditTile("Hydration Level", data['hydration'] ?? "Good", Icons.water_drop, () {}),
+        _buildEditTile("Blood Pressure", data['bp'] ?? "120/80", Icons.speed, () {}),
+        _buildEditTile("Blood Sugar", data['sugar'] ?? "90 mg/dL", Icons.opacity, () {}),
+        _buildEditTile("Heart Rate", data['heart_rate'] ?? "72 bpm", Icons.favorite, () {}),
+        _buildEditTile("Weight", data['weight'] ?? "70 kg", Icons.monitor_weight, () {}),
+      ],
+    );
+  }
+
+  Widget _buildMedicalHistoryTab(Map<String, dynamic> medicalData, Map<String, dynamic> doctorData) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildEditTile("Blood Type", medicalData['blood_type'] ?? "A+", Icons.bloodtype, () {}),
+        _buildEditTile("Allergies", medicalData['allergies'] ?? "None", Icons.warning_amber, () {}),
+        _buildEditTile("Chronic Conditions", medicalData['chronic'] ?? "None", Icons.history, () {}),
+        _buildEditTile("Important Notes", medicalData['notes'] ?? "None", Icons.note_alt, () {}),
+        _buildEditTile("Past Surgeries", medicalData['surgeries'] ?? "None", Icons.medical_services, () {}),
+        
+        // DISPLAY DOCTOR NAME FROM THE NEW API
+        _buildEditTile(
+          "Preferred Doctor", 
+          doctorData['DoctorName'] ?? "None Assigned", 
+          Icons.person, 
+          () {}
         ),
       ],
     );
   }
-}
 
-class _ActionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color bg;
-  final VoidCallback onTap;
-
-  const _ActionCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.bg,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.sectionSeparator),
-          boxShadow: const [
-            BoxShadow(
-              blurRadius: 10,
-              offset: Offset(0, 6),
-              color: Color(0x12000000),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.sectionBackground,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: AppColors.primary),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primaryText,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.descriptionText,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DisabledCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-
-  const _DisabledCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.containerBackground.withOpacity(0.75),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.sectionSeparator),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.sectionBackground,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: AppColors.descriptionText),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryText,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.descriptionText,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.lock_rounded, color: AppColors.descriptionText),
-        ],
+  Widget _buildEditTile(String title, String value, IconData icon, VoidCallback onEdit) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: AppColors.primary.withOpacity(0.1))),
+      child: ListTile(
+        leading: CircleAvatar(backgroundColor: AppColors.primary.withOpacity(0.1), child: Icon(icon, color: AppColors.primary)),
+        title: Text(title, style: const TextStyle(fontSize: 14, color: AppColors.descriptionText)),
+        subtitle: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryText)),
+        trailing: IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: onEdit),
       ),
     );
   }
