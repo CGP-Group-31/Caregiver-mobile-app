@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../elder/elder_profile.dart';
+import '../auth/elder_profile.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../more/more_screen.dart';
 import '../schedule/schedule_screen.dart';

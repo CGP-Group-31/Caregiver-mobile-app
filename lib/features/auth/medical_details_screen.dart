@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
-import '../auth/medicine_reminders_screen.dart';
-import '../auth/doctor_service.dart';
+import 'medicine_reminders_screen.dart';
+import 'doctor_service.dart';
 import '../../../core/network/dio_client.dart'; // adjust if your path differs
 
 class MedicalDetailsScreen extends StatefulWidget {
@@ -18,6 +18,7 @@ class MedicalDetailsScreen extends StatefulWidget {
 }
 
 class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
+
   static const Color cPrimary = Color(0xFF2E7D7A); // teal
   static const Color cBg = Color(0xFFD6EFE6); // light mint background
   static const Color cMint = Color(0xFFBEE8DA); // mint
@@ -34,6 +35,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
   final chronicCtrl = TextEditingController();
   final notesCtrl = TextEditingController();
   final surgeriesCtrl = TextEditingController();
+
 
   final preferredDoctorCtrl = TextEditingController();
   DoctorItem? selectedDoctor;
@@ -112,8 +114,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
 
   String? _optionalMax(String? v, int max, String fieldName) {
     if (v == null || v.trim().isEmpty) return null; // optional
-    // Increased max limits for "unlimited" feel as requested
-    if (v.trim().length > 5000) return "$fieldName is too long (max 5000 chars)";
+    if (v.trim().length > max) return "$fieldName is too long (max $max chars)";
     return null;
   }
 
@@ -155,6 +156,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
     };
 
     try {
+
       final res = await dio.post(
         "/api/v1/caregiver/elder-create/elder-profile",
         data: payload,
@@ -172,7 +174,10 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
       if (status == 422) {
         throw Exception("Please check the details you entered (validation error).");
       } else if (status == 404) {
-        throw Exception(data is Map && data["detail"] != null ? data["detail"].toString() : "Resource not found.");
+
+        throw Exception(data is Map && data["detail"] != null
+            ? data["detail"].toString()
+            : "Resource not found.");
       } else if (status == 500) {
         throw Exception("Server error. Please try again.");
       } else {
@@ -199,6 +204,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
     setState(() => loading = true);
 
     try {
+
       await _submitMedicalDetailsToApi();
 
       if (!mounted) return;
@@ -251,25 +257,26 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                       child: Column(
                         children: [
                           DropdownButtonFormField<String>(
-                            value: bloodType,
+                            initialValue: bloodType,
                             items: bloodTypes
                                 .map(
                                   (b) => DropdownMenuItem(
-                                    value: b,
-                                    child: Text(
-                                      b,
-                                      style: const TextStyle(
-                                        color: cTextDark,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
+                                value: b,
+                                child: Text(
+                                  b,
+                                  style: const TextStyle(
+                                    color: cTextDark,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                )
+                                ),
+                              ),
+                            )
                                 .toList(),
                             onChanged: (v) => setState(() => bloodType = v),
                             decoration: _decor(
                               "Blood Type...",
-                              suffix: const Icon(Icons.chevron_right_rounded, color: cGrey2),
+                              suffix: const Icon(Icons.chevron_right_rounded,
+                                  color: cGrey2),
                             ),
                             dropdownColor: cSurface,
                             validator: (v) {
@@ -280,36 +287,53 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                             },
                           ),
                           const SizedBox(height: 12),
-                          
-                          ExpandableTextFormField(
+
+                          TextFormField(
                             controller: allergiesCtrl,
-                            hintText: "Allergies...",
                             decoration: _decor("Allergies..."),
-                            validator: (v) => _optionalMax(v, 5000, "Allergies"),
+                            style: const TextStyle(
+                              color: cTextDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            validator: (v) => _optionalMax(v, 120, "Allergies"),
                           ),
                           const SizedBox(height: 12),
 
-                          ExpandableTextFormField(
+                          TextFormField(
                             controller: chronicCtrl,
-                            hintText: "Chronic Conditions...",
                             decoration: _decor("Chronic Conditions..."),
-                            validator: (v) => _optionalMax(v, 5000, "Chronic Conditions"),
+                            style: const TextStyle(
+                              color: cTextDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            validator: (v) =>
+                                _optionalMax(v, 140, "Chronic Conditions"),
                           ),
                           const SizedBox(height: 12),
 
-                          ExpandableTextFormField(
+                          TextFormField(
                             controller: notesCtrl,
-                            hintText: "Important Notes...",
+                            maxLines: 2,
                             decoration: _decor("Important Notes..."),
-                            validator: (v) => _optionalMax(v, 5000, "Important Notes"),
+                            style: const TextStyle(
+                              color: cTextDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            validator: (v) =>
+                                _optionalMax(v, 200, "Important Notes"),
                           ),
                           const SizedBox(height: 12),
 
-                          ExpandableTextFormField(
+                          TextFormField(
                             controller: surgeriesCtrl,
-                            hintText: "Past Surgeries...",
+                            maxLines: 2,
                             decoration: _decor("Past Surgeries..."),
-                            validator: (v) => _optionalMax(v, 5000, "Past Surgeries"),
+                            style: const TextStyle(
+                              color: cTextDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            validator: (v) =>
+                                _optionalMax(v, 200, "Past Surgeries"),
                           ),
                           const SizedBox(height: 12),
 
@@ -319,14 +343,16 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                             onTap: _openDoctorSearch,
                             decoration: _decor(
                               "Preferred Doctor",
-                              suffix: const Icon(Icons.search_rounded, color: cGrey2),
+                              suffix: const Icon(Icons.search_rounded,
+                                  color: cGrey2),
                             ),
                             style: const TextStyle(
                               color: cTextDark,
                               fontWeight: FontWeight.w600,
                             ),
                             validator: (v) {
-                              final err = _optionalMax(v, 80, "Preferred Doctor");
+                              final err =
+                              _optionalMax(v, 80, "Preferred Doctor");
                               if (err != null) return err;
 
                               if (selectedDoctor == null) {
@@ -353,20 +379,20 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                               ),
                               child: loading
                                   ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
                                   : const Text(
-                                      "Continue",
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                "Continue",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
 
@@ -386,94 +412,6 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
   }
 }
 
-class ExpandableTextFormField extends StatefulWidget {
-  final TextEditingController controller;
-  final String hintText;
-  final InputDecoration decoration;
-  final String? Function(String?)? validator;
-  final int collapsedLines;
-
-  const ExpandableTextFormField({
-    super.key,
-    required this.controller,
-    required this.hintText,
-    required this.decoration,
-    this.validator,
-    this.collapsedLines = 2,
-  });
-
-  @override
-  State<ExpandableTextFormField> createState() => _ExpandableTextFormFieldState();
-}
-
-class _ExpandableTextFormFieldState extends State<ExpandableTextFormField> {
-  bool isExpanded = false;
-  bool showReadMore = false;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_checkText);
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_checkText);
-    super.dispose();
-  }
-
-  void _checkText() {
-    final text = widget.controller.text;
-    if (text.isEmpty) {
-      if (showReadMore) setState(() => showReadMore = false);
-      return;
-    }
-
-    // Rough check for "long message" logic
-    // We use a simple line count check or character count check
-    final lines = text.split('\n').length;
-    final isLong = lines > widget.collapsedLines || text.length > 100;
-
-    if (isLong != showReadMore) {
-      setState(() => showReadMore = isLong);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        TextFormField(
-          controller: widget.controller,
-          maxLines: isExpanded ? null : widget.collapsedLines,
-          style: const TextStyle(
-            color: Color(0xFF243333),
-            fontWeight: FontWeight.w600,
-          ),
-          decoration: widget.decoration,
-          validator: widget.validator,
-          onChanged: (v) => _checkText(),
-        ),
-        if (showReadMore)
-          GestureDetector(
-            onTap: () => setState(() => isExpanded = !isExpanded),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 4, right: 8),
-              child: Text(
-                isExpanded ? "Read Less" : "Read More",
-                style: const TextStyle(
-                  color: Color(0xFF2E7D7A),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
 
 class DoctorSearchDelegate extends SearchDelegate<DoctorItem?> {
   DoctorSearchDelegate({
@@ -494,7 +432,8 @@ class DoctorSearchDelegate extends SearchDelegate<DoctorItem?> {
   String get searchFieldLabel => "Search doctor name";
 
   @override
-  TextStyle? get searchFieldStyle => const TextStyle(color: Colors.white, fontWeight: FontWeight.w600);
+  TextStyle? get searchFieldStyle =>
+      const TextStyle(color: Colors.white, fontWeight: FontWeight.w600);
 
   @override
   ThemeData appBarTheme(BuildContext context) {
@@ -520,18 +459,18 @@ class DoctorSearchDelegate extends SearchDelegate<DoctorItem?> {
 
   @override
   List<Widget>? buildActions(BuildContext context) => [
-        if (query.isNotEmpty)
-          IconButton(
-            icon: const Icon(Icons.clear_rounded),
-            onPressed: () => query = "",
-          ),
-      ];
+    if (query.isNotEmpty)
+      IconButton(
+        icon: const Icon(Icons.clear_rounded),
+        onPressed: () => query = "",
+      ),
+  ];
 
   @override
   Widget? buildLeading(BuildContext context) => IconButton(
-        icon: const Icon(Icons.arrow_back_rounded),
-        onPressed: () => close(context, null),
-      );
+    icon: const Icon(Icons.arrow_back_rounded),
+    onPressed: () => close(context, null),
+  );
 
   @override
   Widget buildSuggestions(BuildContext context) {
@@ -677,7 +616,9 @@ class _DoctorResultsNice extends StatelessWidget {
           itemCount: list.length,
           itemBuilder: (context, i) {
             final d = list[i];
-            final spec = d.specialization.trim().isEmpty ? "Doctor" : d.specialization.trim();
+            final spec = d.specialization.trim().isEmpty
+                ? "Doctor"
+                : d.specialization.trim();
             final hospital = d.hospital.trim();
 
             return Padding(
@@ -727,14 +668,16 @@ class _DoctorResultsNice extends StatelessWidget {
                                 runSpacing: 6,
                                 children: [
                                   _chip(spec, isPrimary: true, textDark: textDark),
-                                  if (hospital.isNotEmpty) _chip(hospital, isPrimary: false, textDark: textDark),
+                                  if (hospital.isNotEmpty)
+                                    _chip(hospital, isPrimary: false, textDark: textDark),
                                 ],
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Icon(Icons.chevron_right_rounded, color: textDark.withValues(alpha: 0.55)),
+                        Icon(Icons.chevron_right_rounded,
+                            color: textDark.withValues(alpha: 0.55)),
                       ],
                     ),
                   ),
@@ -751,7 +694,9 @@ class _DoctorResultsNice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isPrimary ? primary.withValues(alpha: 0.12) : grey1.withValues(alpha: 0.12),
+        color: isPrimary
+            ? primary.withValues(alpha: 0.12)
+            : grey1.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
