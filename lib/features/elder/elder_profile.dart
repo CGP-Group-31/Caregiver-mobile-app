@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../elder/elder_model.dart';
-import '../elder/elder_service.dart';
-import '../elder/health_details_page.dart';
-import '../elder/medical_record_screen.dart';
-import '../elder/edit_elder_profile_screen.dart';
-import 'theme.dart';
+import 'elder_model.dart';
+import 'elder_service.dart';
+import 'health_details_page.dart';
+import 'medical_record_screen.dart';
+import 'edit_elder_profile_screen.dart';
+import '../auth/theme.dart';
 
 class ElderProfileScreen extends StatefulWidget {
   final VoidCallback? onBackToHome;
