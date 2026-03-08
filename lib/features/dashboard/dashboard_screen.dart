@@ -3,6 +3,7 @@ import '../../core/session/session_manager.dart';
 import '../dashboard/app_colors.dart';
 import '../dashboard/settings_screen.dart';
 import '../dashboard/dashboard_service.dart';
+import '../elder/meals_hydration.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -107,7 +108,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
-                              "Home",
+                              "Home Test",
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -202,13 +203,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             icon: _iconForType(type),
                             color: AppColors.warning,
                           );
-                        }),
+                        }), const SizedBox(height: 30),
+
+Center(
+  child: ElevatedButton(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: AppColors.primary,
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const MealsHydrationScreen(),
+        ),
+      );
+    },
+    child: const Text(
+      "meals",
+      style: TextStyle(color: Colors.white),
+    ),
+  ),
+),
                       ],
                     ),
                 ),
       ),
     );
   }
+                        
+
+  
 
   Widget _errorView(){
     return Center(
