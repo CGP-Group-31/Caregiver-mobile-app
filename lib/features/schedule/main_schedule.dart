@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/session/session_manager.dart';
 import '../auth/theme.dart';
 import 'schedule_screen.dart';
+import 'appointment_schedule_screen.dart';
 
 class MainScheduleScreen extends StatefulWidget {
   const MainScheduleScreen({super.key});
@@ -75,16 +76,15 @@ class _MainScheduleScreenState extends State<MainScheduleScreen> {
               title: "Appointments",
               subtitle: "Doctor visits & reminders",
               onTap: () {
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Appointments page coming soon")),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AppointmentScheduleScreen(),
+                  ),
                 );
-
               },
             ),
-
             const SizedBox(height: 20),
-
             /// MEALS & HYDRATION
             _scheduleCard(
               icon: Icons.restaurant,
