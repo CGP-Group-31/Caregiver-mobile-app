@@ -113,7 +113,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 );
               },
             ),
-
             buildCard(
               icon: Icons.edit_calendar,
               title: "Update Medicine",

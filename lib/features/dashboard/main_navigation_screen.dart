@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../elder/elder_profile.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../more/more_screen.dart';
-import '../schedule/schedule_screen.dart';
+import '../schedule/main_schedule.dart';
 import '../messages/messages_screen.dart';
 import '../alerts/alerts_screen.dart';
 
@@ -24,7 +24,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context){
     final screens = <Widget> [
       const DashboardScreen(),
-      const ScheduleScreen(),
+      const MainScheduleScreen(),
       const MessagesScreen(),
       ElderProfileScreen(onBackToHome: () => _onItemTapped(0)),
     ];
