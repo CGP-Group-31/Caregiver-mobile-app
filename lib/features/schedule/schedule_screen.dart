@@ -115,6 +115,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
 
             buildCard(
+              icon: Icons.edit_calendar,
+              title: "Update Medicine",
+              subtitle: "Edit an existing medicine schedule",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const UpdateMedicineScreen(),
+                  ),
+                );
+              },
+            ),
+
+            buildCard(
               icon: Icons.delete_outline,
               title: "Delete Medicine",
               subtitle: "Remove a medicine schedule",
