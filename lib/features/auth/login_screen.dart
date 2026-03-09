@@ -169,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     border: Border.all(color: _gold.withOpacity(0.55), width: 1),
                                   ),
                                   child: const Text(
-                                    "TrustCare",
+                                    "Caregiver Access",
                                     style: TextStyle(
                                       color: _dark,
                                       fontWeight: FontWeight.w800,

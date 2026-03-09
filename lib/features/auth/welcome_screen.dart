@@ -66,7 +66,7 @@ class WelcomeScreen extends StatelessWidget {
                             ),
                           ),
                           child: const Text(
-                            " TrustCare - Elder Care System",
+                            "Elder Care System",
                             style: TextStyle(
                               color: AppColors.textDark,
                               fontSize: 12.5,
@@ -89,7 +89,15 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
 
-                       
+                        // Subtitle
+                        const Text(
+                          "Manage reminders, safety features, and health updates with a calm, simple experience.",
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            color: AppColors.textMuted,
+                            height: 1.45,
+                          ),
+                        ),
 
                         const SizedBox(height: 22),
 
