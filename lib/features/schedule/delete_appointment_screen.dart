@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../core/network/dio_client.dart';
 import '../../../core/session/session_manager.dart';
 import '../auth/theme.dart';
+import 'appointment_service.dart';
 
 class DeleteAppointmentScreen extends StatefulWidget {
   const DeleteAppointmentScreen({super.key});
@@ -12,22 +12,9 @@ class DeleteAppointmentScreen extends StatefulWidget {
 }
 
 class _DeleteAppointmentScreenState extends State<DeleteAppointmentScreen> {
+
   List appointments = [];
   bool loading = true;
-
-  Future<void> loadAppointments() async {
-    final elderId = await SessionManager.getElderId();
-
-    final res = await DioClient.dio.get(
-      "/api/v1/caregiver/appointments/elder/$elderId",
-    );
-
-    appointments = res.data;
-
-    setState(() {
-      loading = false;
-    });
-  }
 
   @override
   void initState() {
@@ -35,20 +22,78 @@ class _DeleteAppointmentScreenState extends State<DeleteAppointmentScreen> {
     loadAppointments();
   }
 
+  //Load appointments
+  Future<void> loadAppointments() async {
+
+    final elderId = await SessionManager.getElderId();
+
+    if (elderId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Elder ID not found")),
+      );
+      return;
+    }
+
+    final data = await AppointmentService.getAppointments(elderId);
+
+    setState(() {
+      appointments = data;
+      loading = false;
+    });
+  }
+
+  //Delete appointment
   Future<void> deleteAppointment(int id) async {
-    await DioClient.dio.delete(
-      "/api/v1/caregiver/appointments/$id",
-    );
+
+    await AppointmentService.deleteAppointment(id);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Appointment deleted")),
+      const SnackBar(content: Text("Appointment deleted successfully")),
     );
 
     loadAppointments();
   }
 
+  //Confirmation dialog
+  void confirmDelete(int id) {
+
+    showDialog(
+      context: context,
+      builder: (context) {
+
+        return AlertDialog(
+          title: const Text("Delete Appointment"),
+          content: const Text(
+              "Are you sure you want to delete this appointment?"),
+          actions: [
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
+            ),
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                deleteAppointment(id);
+              },
+              child: const Text(
+                "Delete",
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       backgroundColor: AppColors.mainBackground,
 
@@ -59,14 +104,24 @@ class _DeleteAppointmentScreenState extends State<DeleteAppointmentScreen> {
 
       body: loading
           ? const Center(child: CircularProgressIndicator())
+          : appointments.isEmpty
+          ? const Center(
+        child: Text(
+          "No Appointments Found",
+          style: TextStyle(fontSize: 16),
+        ),
+      )
           : ListView.builder(
         itemCount: appointments.length,
         itemBuilder: (context, index) {
+
           final a = appointments[index];
 
           return Container(
-            margin:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            margin: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8
+            ),
 
             decoration: BoxDecoration(
               color: AppColors.containerBackground,
@@ -81,8 +136,9 @@ class _DeleteAppointmentScreenState extends State<DeleteAppointmentScreen> {
             ),
 
             child: ListTile(
+
               title: Text(
-                a["title"],
+                a["Title"] ?? "No Title",
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryText,
@@ -90,17 +146,21 @@ class _DeleteAppointmentScreenState extends State<DeleteAppointmentScreen> {
               ),
 
               subtitle: Text(
-                a["doctor_name"],
-                style:
-                const TextStyle(color: AppColors.descriptionText),
+                "Doctor: ${a["DoctorName"] ?? "Unknown"}",
+                style: const TextStyle(
+                    color: AppColors.descriptionText
+                ),
               ),
 
               trailing: IconButton(
-                icon: const Icon(Icons.delete,
-                    color: AppColors.sosButton),
+                icon: const Icon(
+                  Icons.delete,
+                  color: AppColors.sosButton,
+                ),
                 onPressed: () =>
-                    deleteAppointment(a["appointment_id"]),
+                    confirmDelete(a["AppointmentID"]),
               ),
+
             ),
           );
         },

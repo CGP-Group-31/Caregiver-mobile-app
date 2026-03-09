@@ -88,59 +88,121 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
       appBar: AppBar(
         title: const Text("Create Appointment"),
         backgroundColor: AppColors.primary,
+        centerTitle: true,
       ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
 
-        child: Form(
-          key: _formKey,
+          child: Container(
+            padding: const EdgeInsets.all(20),
 
-          child: ListView(
-            children: [
+            decoration: BoxDecoration(
+              color: AppColors.containerBackground,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0,5),
+                )
+              ],
+            ),
 
-              _input(doctorCtrl,"Doctor Name"),
-              const SizedBox(height:16),
+            child: Form(
+              key: _formKey,
 
-              _input(titleCtrl,"Title"),
-              const SizedBox(height:16),
+              child: ListView(
+                children: [
 
-              _input(locationCtrl,"Location"),
-              const SizedBox(height:16),
+                  const Text(
+                    "Doctor Information",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppColors.primaryText,
+                    ),
+                  ),
 
-              _input(notesCtrl,"Notes"),
-              const SizedBox(height:20),
+                  const SizedBox(height: 15),
 
-              ElevatedButton(
-                onPressed: pickDate,
-                child: Text(
-                    appointmentDate==null
+                  _input(doctorCtrl,"Doctor Name"),
+
+                  const SizedBox(height:16),
+
+                  _input(titleCtrl,"Title"),
+
+                  const SizedBox(height:16),
+
+                  _input(locationCtrl,"Location"),
+
+                  const SizedBox(height:16),
+
+                  _input(notesCtrl,"Notes"),
+
+                  const SizedBox(height:30),
+
+                  const Text(
+                    "Appointment Schedule",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppColors.primaryText,
+                    ),
+                  ),
+
+                  const SizedBox(height:15),
+
+                  _dateTile(
+                    icon: Icons.calendar_today,
+                    title: appointmentDate==null
                         ? "Select Date"
-                        : DateFormat('yyyy-MM-dd').format(appointmentDate!)
-                ),
-              ),
+                        : DateFormat('yyyy-MM-dd').format(appointmentDate!),
+                    onTap: pickDate,
+                  ),
 
-              const SizedBox(height:10),
+                  const SizedBox(height:12),
 
-              ElevatedButton(
-                onPressed: pickTime,
-                child: Text(
-                    appointmentTime==null
+                  _dateTile(
+                    icon: Icons.access_time,
+                    title: appointmentTime==null
                         ? "Select Time"
-                        : "${appointmentTime!.hour}:${appointmentTime!.minute}"
-                ),
+                        : "${appointmentTime!.hour}:${appointmentTime!.minute}",
+                    onTap: pickTime,
+                  ),
+
+                  const SizedBox(height:30),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical:14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+
+                      onPressed: loading ? null : createAppointment,
+
+                      child: loading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                        "Create Appointment",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  )
+
+                ],
               ),
-
-              const SizedBox(height:30),
-
-              ElevatedButton(
-                onPressed: loading ? null : createAppointment,
-                child: loading
-                    ? const CircularProgressIndicator()
-                    : const Text("Create Appointment"),
-              )
-
-            ],
+            ),
           ),
         ),
       ),
@@ -152,14 +214,42 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
     return TextFormField(
       controller: c,
       validator: (v)=>v!.isEmpty?"Required":null,
+
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(color: AppColors.textShade),
+
         filled: true,
         fillColor: AppColors.sectionBackground,
+
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
         ),
+
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal:16,vertical:14),
+      ),
+    );
+  }
+
+  Widget _dateTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }){
+
+    return Container(
+
+      decoration: BoxDecoration(
+        color: AppColors.sectionBackground,
+        borderRadius: BorderRadius.circular(14),
+      ),
+
+      child: ListTile(
+        leading: Icon(icon,color: AppColors.primary),
+        title: Text(title),
+        onTap: onTap,
       ),
     );
   }

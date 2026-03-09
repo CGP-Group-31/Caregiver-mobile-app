@@ -52,8 +52,6 @@ class _MainScheduleScreenState extends State<MainScheduleScreen> {
         child: Column(
           children: [
 
-            const SizedBox(height: 40),
-
             _scheduleCard(
               icon: Icons.medication,
               title: "Medicine",
