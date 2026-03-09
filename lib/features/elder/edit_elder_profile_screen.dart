@@ -128,7 +128,8 @@ class _EditElderProfileScreenState extends State<EditElderProfileScreen> {
             children: [
               const Text("General Information", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryText)),
               const SizedBox(height: 20),
-              _buildEditField("Full Name", _nameController, Icons.person_outline),
+              // CHANGED: Full Name is now read-only (locked)
+              _buildReadOnlyField("Full Name", widget.elder.name, Icons.person_outline),
               const SizedBox(height: 16),
               _buildEditField("Email", _emailController, Icons.email_outlined, keyboardType: TextInputType.emailAddress),
               const SizedBox(height: 16),
@@ -150,7 +151,7 @@ class _EditElderProfileScreenState extends State<EditElderProfileScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _save,
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Update Profile", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: _isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text("Update Profile", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -179,7 +180,7 @@ class _EditElderProfileScreenState extends State<EditElderProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text("Preferred Doctor", style: TextStyle(fontSize: 12, color: AppColors.descriptionText)),
-                  Text(_selectedDoctorName ?? "Tap to assign a doctor", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(_selectedDoctorName ?? "Tap to assign a doctor", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryText)),
                 ],
               ),
             ),
@@ -200,13 +201,14 @@ class _EditElderProfileScreenState extends State<EditElderProfileScreen> {
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.primaryText),
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.textShade.withOpacity(0.1))),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.textShade.withOpacity(0.1))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
           ),
           validator: (v) => v!.isEmpty ? "Required" : null,
         ),
@@ -222,14 +224,14 @@ class _EditElderProfileScreenState extends State<EditElderProfileScreen> {
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: AppColors.sectionBackground.withOpacity(0.3), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.sectionSeparator.withOpacity(0.5))),
           child: Row(
             children: [
-              Icon(icon, color: Colors.grey[600], size: 22),
+              Icon(icon, color: AppColors.descriptionText, size: 22),
               const SizedBox(width: 12),
-              Text(value, style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
+              Text(value, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.primaryText)),
               const Spacer(),
-              const Icon(Icons.lock_outline, size: 18, color: Colors.grey),
+              const Icon(Icons.lock_outline, size: 18, color: AppColors.descriptionText),
             ],
           ),
         ),
@@ -240,10 +242,36 @@ class _EditElderProfileScreenState extends State<EditElderProfileScreen> {
 
 class DoctorSearchDelegate extends SearchDelegate<Map<String, dynamic>?> {
   @override
-  List<Widget>? buildActions(BuildContext context) => [IconButton(icon: const Icon(Icons.clear), onPressed: () => query = "")];
+  String get searchFieldLabel => "Search doctor name";
 
   @override
-  Widget? buildLeading(BuildContext context) => IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => close(context, null));
+  ThemeData appBarTheme(BuildContext context) {
+    return ThemeData(
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        hintStyle: TextStyle(color: Colors.white70),
+        border: InputBorder.none,
+      ),
+      textTheme: const TextTheme(
+        titleLarge: TextStyle(color: Colors.white, fontSize: 18),
+      ),
+    );
+  }
+
+  @override
+  List<Widget>? buildActions(BuildContext context) => [
+    if (query.isNotEmpty)
+      IconButton(icon: const Icon(Icons.clear, color: Colors.white), onPressed: () => query = "")
+  ];
+
+  @override
+  Widget? buildLeading(BuildContext context) => IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.white), 
+    onPressed: () => close(context, null)
+  );
 
   @override
   Widget buildResults(BuildContext context) => _buildList();
@@ -252,27 +280,42 @@ class DoctorSearchDelegate extends SearchDelegate<Map<String, dynamic>?> {
   Widget buildSuggestions(BuildContext context) => _buildList();
 
   Widget _buildList() {
-    if (query.isEmpty) return const Center(child: Text("Search for a doctor by name or hospital"));
+    if (query.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search, size: 64, color: AppColors.sectionSeparator),
+            SizedBox(height: 16),
+            Text("Search for a doctor by name or hospital", style: TextStyle(color: AppColors.descriptionText)),
+          ],
+        ),
+      );
+    }
 
     return FutureBuilder<List<dynamic>>(
       future: ElderService.searchDoctors(name: query),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
         final docs = snapshot.data ?? [];
-        if (docs.isEmpty) return const Center(child: Text("No doctors found"));
+        if (docs.isEmpty) return const Center(child: Text("No doctors found", style: TextStyle(color: AppColors.descriptionText)));
 
         return ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: docs.length,
           itemBuilder: (context, i) {
             final doc = docs[i];
             final name = doc['full_name'] ?? doc['doctor_name'] ?? doc['name'] ?? doc['FullName'] ?? 'Unknown Doctor';
             final id = doc['DoctorID'] ?? doc['id'] ?? doc['doctor_id'];
-            final hospital = doc['hospital'] ?? doc['Hospital'] ?? '';
+            final hospital = doc['hospital'] ?? doc['Hospital'] ?? 'General Hospital';
 
             return ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person)),
-              title: Text(name),
-              subtitle: Text(hospital),
+              leading: CircleAvatar(
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+                child: const Icon(Icons.person, color: AppColors.primary),
+              ),
+              title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryText)),
+              subtitle: Text(hospital, style: const TextStyle(color: AppColors.descriptionText)),
               onTap: () => close(context, {'id': id, 'name': name}),
             );
           },

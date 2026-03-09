@@ -4,7 +4,6 @@ import 'package:caregiver/features/elder/elder_model.dart';
 import 'package:dio/dio.dart';
 
 class ElderService {
-  /// GET Elder Details
   static Future<ElderModel> getElderDetails() async {
     final elderId = await SessionManager.getElderId();
     if (elderId == null || elderId == 0) throw Exception("Invalid elder id in session");
@@ -25,7 +24,7 @@ class ElderService {
     }
   }
 
-  /// PATCH Elder Details - Force use of valid ID
+
   static Future<void> patchElderDetails({
     required int elderId, 
     required Map<String, dynamic> data,
@@ -55,7 +54,7 @@ class ElderService {
     }
   }
 
-  /// PUT Update Medical Profile
+
   static Future<void> updateMedicalProfile({
     required int elderId,
     required Map<String, dynamic> data,
