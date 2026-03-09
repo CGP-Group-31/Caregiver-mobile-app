@@ -41,9 +41,15 @@ class _MainScheduleScreenState extends State<MainScheduleScreen> {
       backgroundColor: AppColors.mainBackground,
 
       appBar: AppBar(
-        title: const Text("Schedule"),
         backgroundColor: AppColors.primary,
         centerTitle: true,
+        title: const Text(
+          "Schedule",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
 
       body: Padding(
