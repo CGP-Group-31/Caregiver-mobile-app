@@ -3,6 +3,7 @@ import '../../core/session/session_manager.dart';
 import '../auth/theme.dart';
 import 'schedule_screen.dart';
 import 'appointment_schedule_screen.dart';
+import '../elder/meals_hydration.dart';
 
 class MainScheduleScreen extends StatefulWidget {
   const MainScheduleScreen({super.key});
@@ -94,13 +95,14 @@ class _MainScheduleScreenState extends State<MainScheduleScreen> {
               icon: Icons.restaurant,
               title: "Meals & Hydration",
               subtitle: "Track food and water intake",
-              onTap: () {
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Meals & Hydration page coming soon")),
-                );
-
-              },
+             onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const MealsHydrationScreen(),
+    ),
+  );
+},
             ),
 
           ],
