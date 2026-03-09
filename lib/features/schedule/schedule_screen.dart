@@ -70,7 +70,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           style: const TextStyle(color: AppColors.descriptionText),
         ),
 
-        trailing: const Icon(Icons.arrow_forward_ios,size:16),
+        trailing: const Icon(Icons.arrow_forward_ios,size:16)
+        ,
 
         onTap: onTap,
       ),
@@ -90,8 +91,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       backgroundColor: AppColors.mainBackground,
 
       appBar: AppBar(
-        title: const Text("Medication Schedule"),
         backgroundColor: AppColors.primary,
+        title: const Text(
+          "Medication Schedule",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
 
       body: Padding(
