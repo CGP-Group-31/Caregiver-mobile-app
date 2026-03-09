@@ -55,6 +55,18 @@ class ElderService {
     }
   }
 
+  /// PUT Update Medical Profile
+  static Future<void> updateMedicalProfile({
+    required int elderId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      await DioClient.dio.put('/api/v1/caregiver/elder-create/elder-profile-update/$elderId', data: data);
+    } on DioException catch (e) {
+      throw Exception('Failed to update medical profile: ${e.response?.statusCode}');
+    }
+  }
+
   static Future<Map<String, dynamic>> getPreferredDoctor() async {
     final elderId = await SessionManager.getElderId();
     if (elderId == null || elderId == 0) throw Exception('Elder ID not found.');

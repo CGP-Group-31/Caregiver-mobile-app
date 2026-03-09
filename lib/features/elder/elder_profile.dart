@@ -4,6 +4,7 @@ import 'elder_service.dart';
 import 'health_details_page.dart';
 import 'medical_record_screen.dart';
 import 'edit_elder_profile_screen.dart';
+import '../location/caregiver_view_location.dart';
 import '../auth/theme.dart';
 
 class ElderProfileScreen extends StatefulWidget {
@@ -128,12 +129,12 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                         children: [
                           const SizedBox(height: 20),
                           
-                          /// SECTION A – Elder Summary (Minimized)
+
                           _buildMinimizedSummaryCard(elder),
                           
                           const SizedBox(height: 40),
                           
-                          /// SECTION B – Navigation Cards
+
                           _buildNavCard(
                             title: "Health Details",
                             description: "Vitals & Medical History",
@@ -152,9 +153,7 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                             title: "Location",
                             description: "Live Tracking & History",
                             icon: Icons.near_me_outlined,
-                            onTap: () {
-                              // Location functionality is handled by teammate
-                            },
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CaregiverViewLocation())),
                           ),
 
                           _buildNavCard(

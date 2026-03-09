@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'elder_service.dart';
 import '../auth/theme.dart';
-import 'package:dio/dio.dart';
-import '../../../core/network/dio_client.dart';
+import '../../core/session/session_manager.dart';
 
 class MedicalRecordScreen extends StatefulWidget {
   const MedicalRecordScreen({super.key});
@@ -16,6 +15,10 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
   Map<String, dynamic>? _editableData;
   bool _isSaving = false;
 
+  final List<String> bloodTypes = const [
+    "A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-", "Unknown",
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -23,36 +26,37 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
   }
 
   void _loadData() {
-    _medicalProfileFuture = ElderService.getMedicalProfile().then((data) {
-      setState(() {
-        _editableData = Map<String, dynamic>.from(data);
+    setState(() {
+      _medicalProfileFuture = ElderService.getMedicalProfile().then((data) {
+        setState(() {
+          _editableData = Map<String, dynamic>.from(data);
+        });
+        return data;
       });
-      return data;
     });
   }
 
   Future<void> _updateMedicalProfile() async {
-    if (_editableData == null) return;
-
     setState(() => _isSaving = true);
 
     try {
-      final elderId = _editableData!['elder_id'] ?? _editableData!['id'];
-      if (elderId == null) throw Exception("Elder ID not found");
-
-      // We use the same structure as the creation but as a patch/update if possible, 
-      // or using the patchElderDetails if that's the intended way.
-      // Based on ElderService, let's see what's available.
+      final sessionElderId = await SessionManager.getElderId();
+      final elderId = sessionElderId ?? _editableData!['elder_id'] ?? _editableData!['id'] ?? _editableData!['user_id'];
       
+      if (elderId == null || elderId == 0) throw Exception("Elder ID not found");
+
       final payload = {
-        "blood_type": _editableData!['blood_type'] ?? _editableData!['BloodType'] ?? "",
-        "allergies": _editableData!['allergies'] ?? _editableData!['Allergies'] ?? "",
-        "chronic_conditions": _editableData!['chronic_conditions'] ?? _editableData!['ChronicConditions'] ?? "",
-        "emergency_notes": _editableData!['emergency_notes'] ?? _editableData!['EmergencyNotes'] ?? "",
-        "past_surgeries": _editableData!['past_surgeries'] ?? _editableData!['PastSurgeries'] ?? "",
+        "blood_type": (_editableData!['blood_type'] ?? _editableData!['BloodType'] ?? "").toString(),
+        "allergies": (_editableData!['allergies'] ?? _editableData!['Allergies'] ?? "").toString(),
+        "chronic_conditions": (_editableData!['chronic_conditions'] ?? _editableData!['ChronicConditions'] ?? "").toString(),
+        "emergency_notes": (_editableData!['emergency_notes'] ?? _editableData!['EmergencyNotes'] ?? "").toString(),
+        "past_surgeries": (_editableData!['past_surgeries'] ?? _editableData!['PastSurgeries'] ?? "").toString(),
       };
 
-      await ElderService.patchElderDetails(elderId: elderId is int ? elderId : int.parse(elderId.toString()), data: payload);
+      await ElderService.updateMedicalProfile(
+        elderId: elderId is int ? elderId : int.parse(elderId.toString()), 
+        data: payload
+      );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -69,7 +73,12 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
   }
 
   void _showEditDialog(String title, List<String> keys, String currentValue) {
-    final controller = TextEditingController(text: currentValue);
+    if (title == "Blood Type") {
+      _showBloodTypePicker(keys, currentValue);
+      return;
+    }
+
+    final controller = TextEditingController(text: (currentValue == "None" || currentValue == "N/A") ? "" : currentValue);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -77,7 +86,7 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
         title: Text("Edit $title", style: const TextStyle(color: AppColors.primary)),
         content: TextField(
           controller: controller,
-          maxLines: title == "Blood Type" ? 1 : null,
+          maxLines: null,
           decoration: InputDecoration(
             hintText: "Enter $title",
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -86,20 +95,15 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text("Cancel", style: TextStyle(color: AppColors.descriptionText)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
             onPressed: () {
               setState(() {
+                if (_editableData == null) _editableData = {};
                 for (var key in keys) {
-                  if (_editableData!.containsKey(key)) {
-                    _editableData![key] = controller.text;
-                  }
-                }
-                // If none of the keys existed, add the first one
-                if (!keys.any((k) => _editableData!.containsKey(k))) {
-                  _editableData![keys.first] = controller.text;
+                  _editableData![key] = controller.text;
                 }
               });
               Navigator.pop(context);
@@ -107,6 +111,46 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
             child: const Text("OK"),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showBloodTypePicker(List<String> keys, String currentValue) {
+    String selected = bloodTypes.contains(currentValue) ? currentValue : bloodTypes.last;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text("Select Blood Type", style: TextStyle(color: AppColors.primary)),
+          content: DropdownButtonFormField<String>(
+            value: selected,
+            items: bloodTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+            onChanged: (v) => setDialogState(() => selected = v!),
+            decoration: InputDecoration(
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel", style: TextStyle(color: AppColors.descriptionText)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              onPressed: () {
+                setState(() {
+                  for (var key in keys) {
+                    _editableData![key] = selected;
+                  }
+                });
+                Navigator.pop(context);
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -143,7 +187,7 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
                     Text("Error: ${snapshot.error}", textAlign: TextAlign.center),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () => setState(() => _loadData()),
+                      onPressed: _loadData,
                       child: const Text("Retry"),
                     )
                   ],
@@ -156,7 +200,7 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
           String getValue(List<String> keys) {
             for (var key in keys) {
-              if (displayData.containsKey(key) && displayData[key] != null) {
+              if (displayData.containsKey(key) && displayData[key] != null && displayData[key].toString().isNotEmpty && displayData[key].toString() != "N/A") {
                 return displayData[key].toString();
               }
             }
@@ -216,7 +260,7 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
                     ),
                     onPressed: _isSaving ? null : _updateMedicalProfile,
                     child: _isSaving
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Text("Update", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
