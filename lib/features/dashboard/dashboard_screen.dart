@@ -98,7 +98,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             : _error != null
                 ? _errorView()
                 : SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -106,28 +106,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              "Home",
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Home",
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Welcome, $_caregiverName 👋",
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                             Row(
                               children: [
-                                IconButton(
-                                  icon: const Icon(Icons.refresh),
-                                  onPressed: _loadDashboard,
+                                _topActionButton(
+                                  icon: Icons.refresh_rounded,
+                                  onTap: _loadDashboard,
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.settings),
-                                  onPressed: () {
+                                const SizedBox(width: 10),
+                                _topActionButton(
+                                  icon: Icons.settings_rounded,
+                                  onTap: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => const SettingsScreen(),
-                                      ),
+                                      )
                                     );
                                   },
                                 ),
@@ -136,37 +151,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                         ),
 
-                        const SizedBox(height: 10),
-
-                        Text(
-                          "Welcome, $_caregiverName 👋",
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-
                         const SizedBox(height: 20),
 
                         ///AI summary
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.containerBg,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                        _glassCard(
                           child: const Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Last AI Check in Summary",
+                                "Last AI Check-in Summary",
                                 style: TextStyle(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
                                   color: AppColors.textPrimary,
                                 ),
                               ),
                               SizedBox(height: 10),
-                              Text("AI summary will appear here once connected."),
+                              Text(
+                                "AI summary will appear here once connected.",
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 14,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -210,6 +217,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _topActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }){
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.7),
+          ),
+        ),
+        child: Icon(icon, color: AppColors.textPrimary),
+      ),
+    );
+  }
+
   Widget _errorView(){
     return Center(
       child: Padding(
@@ -242,6 +271,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _glassCard({required Widget child}){
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.7),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
   Widget _alertTitle({
     required String title,
     required String subtitle,
@@ -249,16 +300,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color color,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.containerBg,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.65),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 12),
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,14 +335,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
                     color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13.5,
+                  ),
                 ),
               ],
             ),
