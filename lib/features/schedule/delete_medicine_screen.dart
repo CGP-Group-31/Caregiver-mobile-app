@@ -1,4 +1,4 @@
-    import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/session/session_manager.dart';
 import '../auth/theme.dart';
@@ -46,6 +46,43 @@ class _DeleteMedicineScreenState extends State<DeleteMedicineScreen> {
     loadMedicines();
   }
 
+  // ⭐ Confirmation Dialog
+  void confirmDelete(int medicationId) {
+
+    showDialog(
+      context: context,
+      builder: (context) {
+
+        return AlertDialog(
+          title: const Text("Delete Medicine"),
+          content: const Text(
+              "Are you sure you want to delete this medicine?"),
+          actions: [
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
+            ),
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                deleteMedicine(medicationId);
+              },
+              child: const Text(
+                "Delete",
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -79,28 +116,34 @@ class _DeleteMedicineScreenState extends State<DeleteMedicineScreen> {
 
               leading: CircleAvatar(
                 backgroundColor: AppColors.sectionBackground,
-                child: const Icon(Icons.medication,
-                    color: AppColors.primary),
+                child: const Icon(
+                  Icons.medication,
+                  color: AppColors.primary,
+                ),
               ),
 
               title: Text(
                 med["name"],
                 style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryText),
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryText,
+                ),
               ),
 
               subtitle: Text(
                 "Dosage: ${med["dosage"]}",
                 style: const TextStyle(
-                    color: AppColors.descriptionText),
+                  color: AppColors.descriptionText,
+                ),
               ),
 
               trailing: IconButton(
-                icon: const Icon(Icons.delete,
-                    color: AppColors.sosButton),
+                icon: const Icon(
+                  Icons.delete,
+                  color: AppColors.sosButton,
+                ),
                 onPressed: () =>
-                    deleteMedicine(med["medicationId"]),
+                    confirmDelete(med["medicationId"]),
               ),
             ),
           );

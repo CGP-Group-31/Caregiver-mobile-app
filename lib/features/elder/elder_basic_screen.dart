@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/session/session_manager.dart';
-import 'theme.dart';
-import 'auth_service.dart';
+import '../auth/theme.dart';
+import '../auth/auth_service.dart';
 import 'medical_details_screen.dart';
 
 class ElderBasicScreen extends StatefulWidget {

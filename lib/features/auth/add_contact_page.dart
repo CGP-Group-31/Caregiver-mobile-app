@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'theme.dart';
 import 'auth_service.dart';
 
@@ -142,8 +143,16 @@ class _AddContactPageState extends State<AddContactPage> {
                         controller: _phoneController,
                         icon: Icons.phone_outlined,
                         label: "Phone",
-                        keyboardType: TextInputType.phone,
-                        validator: (v) => (v == null || v.isEmpty) ? 'Enter phone' : null,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Enter phone';
+                          if (v.length != 10) return 'Phone must be exactly 10 digits';
+                          return null;
+                        },
                       ),
                       const Divider(height: 1, indent: 60, endIndent: 20),
                       _buildSamsungField(
@@ -189,6 +198,7 @@ class _AddContactPageState extends State<AddContactPage> {
     required IconData icon,
     required String label,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
     return Padding(
@@ -205,6 +215,7 @@ class _AddContactPageState extends State<AddContactPage> {
             child: TextFormField(
               controller: controller,
               keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
               validator: validator,
               cursorColor: AppColors.primary,
               decoration: InputDecoration(
