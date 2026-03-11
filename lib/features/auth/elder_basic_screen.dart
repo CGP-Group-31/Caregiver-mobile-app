@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
 import '../../core/session/session_manager.dart';
 import 'theme.dart';
 import 'auth_service.dart';
@@ -25,9 +26,9 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
 
   bool loading = false;
   bool showPassword = false;
+  bool submitted = false;
 
   String? selectedGender;
-
   String? emailError;
 
   final List<String> genderOptions = const ["Male", "Female"];
@@ -44,8 +45,12 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
     super.dispose();
   }
 
-  InputDecoration _decor(String hint,
-      {Widget? suffix, Widget? prefix, String? error}) {
+  InputDecoration _decor(
+      String hint, {
+        Widget? suffix,
+        Widget? prefix,
+        String? error,
+      }) {
     return InputDecoration(
       hintText: hint,
       errorText: error,
@@ -78,6 +83,11 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: const BorderSide(color: Colors.redAccent, width: 1.6),
+      ),
+      errorStyle: const TextStyle(
+        color: Colors.redAccent,
+        fontSize: 12.2,
+        fontWeight: FontWeight.w600,
       ),
     );
   }
@@ -233,6 +243,21 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
       initialDate: DateTime(1960),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: AppColors.primaryText,
+            ),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: AppColors.containerBackground,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null) {
@@ -246,19 +271,57 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
     }
   }
 
+  bool _looksLikeExistingAccountError(Object e) {
+    if (e is DioException) {
+      final code = e.response?.statusCode;
+      final data = e.response?.data?.toString().toLowerCase() ?? "";
+      final msg = e.message?.toLowerCase() ?? "";
+
+      if (code == 409) return true;
+
+      if (code == 400 || code == 401 || code == 403 || code == 422) {
+        if (data.contains("already") ||
+            data.contains("exists") ||
+            data.contains("duplicate") ||
+            data.contains("email") ||
+            data.contains("request denied") ||
+            data.contains("request failed") ||
+            data.contains("failed to register elder")) {
+          return true;
+        }
+      }
+
+      if (msg.contains("request failed") ||
+          msg.contains("request denied") ||
+          msg.contains("failed to register elder")) {
+        return true;
+      }
+    }
+
+    final msg = e.toString().toLowerCase();
+
+    return msg.contains("already") ||
+        msg.contains("exists") ||
+        msg.contains("duplicate") ||
+        msg.contains("email already") ||
+        msg.contains("account already") ||
+        msg.contains("existing") ||
+        msg.contains("request denied") ||
+        msg.contains("request failed") ||
+        msg.contains("failed to register elder");
+  }
+
   Future<void> submit() async {
     FocusScope.of(context).unfocus();
 
     setState(() {
+      submitted = true;
       emailError = null;
     });
 
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     if (selectedGender == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select gender")),
-      );
       return;
     }
 
@@ -293,21 +356,47 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
           builder: (_) => MedicalDetailsScreen(elderId: elderId),
         ),
       );
-    } catch (e) {
-      if (e.toString().toLowerCase().contains("existing")) {
+    } on DioException catch (e) {
+      if (_looksLikeExistingAccountError(e)) {
         setState(() {
-          emailError = "An account with this email already exists";
+          emailError = "Account already exists. Log in or use another email";
+          loading = false;
         });
-
         _formKey.currentState?.validate();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        return;
       }
-    }
 
-    if (mounted) setState(() => loading = false);
+      if (!mounted) return;
+      setState(() => loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            (e.response?.data is Map && e.response?.data["detail"] != null)
+                ? e.response!.data["detail"].toString()
+                : "Request failed",
+          ),
+        ),
+      );
+    } catch (e) {
+      if (_looksLikeExistingAccountError(e)) {
+        setState(() {
+          emailError = "Account already exists. Log in or use another email";
+          loading = false;
+        });
+        _formKey.currentState?.validate();
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() => loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst("Exception: ", ""),
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -346,7 +435,9 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
               ),
               child: Form(
                 key: _formKey,
-                autovalidateMode: AutovalidateMode.onUserInteraction,
+                autovalidateMode: submitted
+                    ? AutovalidateMode.onUserInteraction
+                    : AutovalidateMode.disabled,
                 child: Column(
                   children: [
                     _fieldContainer(
@@ -360,7 +451,6 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-
                     _fieldContainer(
                       child: TextFormField(
                         controller: emailCtrl,
@@ -370,11 +460,15 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                           error: emailError,
                         ),
                         keyboardType: TextInputType.emailAddress,
+                        onChanged: (_) {
+                          if (emailError != null) {
+                            setState(() => emailError = null);
+                          }
+                        },
                         validator: _emailValidator,
                       ),
                     ),
                     const SizedBox(height: 14),
-
                     _fieldContainer(
                       child: TextFormField(
                         controller: phoneCtrl,
@@ -391,7 +485,6 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-
                     _fieldContainer(
                       child: TextFormField(
                         controller: passwordCtrl,
@@ -404,6 +497,7 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                               showPassword
                                   ? Icons.visibility_off
                                   : Icons.visibility,
+                              color: AppColors.textShade,
                             ),
                             onPressed: () {
                               setState(() {
@@ -416,7 +510,6 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-
                     _fieldContainer(
                       child: TextFormField(
                         controller: dobCtrl,
@@ -430,15 +523,16 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-
                     _fieldContainer(
                       child: DropdownButtonFormField<String>(
                         initialValue: selectedGender,
                         items: genderOptions
-                            .map((g) => DropdownMenuItem(
-                          value: g,
-                          child: Text(g),
-                        ))
+                            .map(
+                              (g) => DropdownMenuItem(
+                            value: g,
+                            child: Text(g),
+                          ),
+                        )
                             .toList(),
                         onChanged: (v) => setState(() => selectedGender = v),
                         decoration: _decor(
@@ -450,7 +544,6 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-
                     _fieldContainer(
                       child: TextFormField(
                         controller: addressCtrl,
@@ -463,7 +556,6 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-
                     _fieldContainer(
                       child: TextFormField(
                         controller: relationCtrl,
@@ -474,9 +566,7 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                         validator: _relationshipValidator,
                       ),
                     ),
-
                     const SizedBox(height: 22),
-
                     SizedBox(
                       width: double.infinity,
                       height: 54,
@@ -484,6 +574,11 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                         onPressed: loading ? null : submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor:
+                          Colors.white.withValues(alpha: 0.8),
+                          disabledBackgroundColor:
+                          AppColors.primary.withValues(alpha: 0.6),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                           ),
@@ -495,11 +590,13 @@ class _ElderBasicScreenState extends State<ElderBasicScreen> {
                             : const Text(
                           "Next",
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w700),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
                     _stepDots(),
                   ],

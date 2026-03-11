@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
 import '../../../core/session/session_manager.dart';
 import 'theme.dart';
 import 'auth_service.dart';
@@ -26,6 +27,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool loading = false;
   bool showPassword = false;
+  bool submitted = false;
+
+  String? emailServerError;
 
   final List<String> genders = const ["Male", "Female"];
 
@@ -44,19 +48,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       String hint, {
         Widget? suffix,
         Widget? prefix,
+        String? errorText,
       }) {
     return InputDecoration(
       hintText: hint,
+      errorText: errorText,
       hintStyle: const TextStyle(
         color: AppColors.descriptionText,
         fontWeight: FontWeight.w500,
-        fontSize: 15,
+        fontSize: 15.5,
       ),
       filled: true,
       fillColor: AppColors.background,
       prefixIcon: prefix,
       suffixIcon: suffix,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide(
@@ -68,7 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         borderRadius: BorderRadius.circular(18),
         borderSide: const BorderSide(
           color: AppColors.primary,
-          width: 1.7,
+          width: 1.6,
         ),
       ),
       errorBorder: OutlineInputBorder(
@@ -82,35 +88,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         borderRadius: BorderRadius.circular(18),
         borderSide: const BorderSide(
           color: Colors.redAccent,
-          width: 1.7,
+          width: 1.6,
         ),
       ),
       errorStyle: const TextStyle(
         color: Colors.redAccent,
-        fontSize: 12,
+        fontSize: 12.2,
         fontWeight: FontWeight.w600,
       ),
-    );
-  }
-
-  Widget _buildFieldContainer({required Widget child}) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.85),
-            blurRadius: 6,
-            offset: const Offset(-2, -2),
-          ),
-        ],
-      ),
-      child: child,
     );
   }
 
@@ -154,12 +139,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!RegExp(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").hasMatch(value)) {
       return "Enter a valid email";
     }
+    if (emailServerError != null) return emailServerError;
     return null;
   }
 
   String? _phoneValidator(String? v) {
     final value = (v ?? "").trim();
-
     if (value.isEmpty) return "Mobile number is required";
     if (!RegExp(r'^\d+$').hasMatch(value)) {
       return "Mobile number must contain digits only";
@@ -167,7 +152,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (value.length != 10) {
       return "Mobile number must be exactly 10 digits";
     }
-
     return null;
   }
 
@@ -274,15 +258,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  bool _looksLikeExistingAccountError(Object e) {
+    if (e is DioException) {
+      final code = e.response?.statusCode;
+      final data = e.response?.data?.toString().toLowerCase() ?? "";
+      final msg = e.message?.toLowerCase() ?? "";
+
+      if (code == 409) return true;
+
+      if (code == 400 || code == 422) {
+        if (data.contains("already") ||
+            data.contains("exists") ||
+            data.contains("duplicate") ||
+            data.contains("email")) {
+          return true;
+        }
+      }
+
+      if (msg.contains("request failed") &&
+          (data.contains("already") ||
+              data.contains("exists") ||
+              data.contains("duplicate") ||
+              data.contains("email"))) {
+        return true;
+      }
+    }
+
+    final msg = e.toString().toLowerCase();
+    return msg.contains("already") ||
+        msg.contains("exists") ||
+        msg.contains("duplicate") ||
+        msg.contains("email already") ||
+        msg.contains("account already") ||
+        msg.contains("request denied") ||
+        msg.contains("request failed");
+  }
+
   Future<void> register() async {
     FocusScope.of(context).unfocus();
 
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      submitted = true;
+      emailServerError = null;
+    });
 
-    if (gender == null || gender!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a gender")),
-      );
+    final valid = _formKey.currentState?.validate() ?? false;
+    if (!valid) return;
+
+    if (gender == null || gender!.trim().isEmpty) {
       return;
     }
 
@@ -307,50 +330,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
         context,
         MaterialPageRoute(builder: (_) => const ElderBasicScreen()),
       );
-    } catch (e) {
-      if (!mounted) return;
+    } on DioException catch (e) {
+      if (_looksLikeExistingAccountError(e)) {
+        setState(() {
+          emailServerError =
+          "Account already exists. Log in or use another email";
+          loading = false;
+        });
+        _formKey.currentState?.validate();
+        return;
+      }
 
+      if (!mounted) return;
+      setState(() => loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.redAccent,
           content: Text(
-            e.toString(),
+            (e.response?.data is Map && e.response?.data["detail"] != null)
+                ? e.response!.data["detail"].toString()
+                : "Request failed",
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (_looksLikeExistingAccountError(e)) {
+        setState(() {
+          emailServerError =
+          "Account already exists. Log in or use another email";
+          loading = false;
+        });
+        _formKey.currentState?.validate();
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() => loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.redAccent,
+          content: Text(
+            e.toString().replaceFirst("Exception: ", ""),
             style: const TextStyle(color: Colors.white),
           ),
         ),
       );
     }
-
-    if (mounted) setState(() => loading = false);
   }
 
   Widget _buildTopIcon() {
     return Container(
-      width: 104,
-      height: 104,
+      width: 92,
+      height: 92,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AppColors.background,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.90),
-            blurRadius: 8,
-            offset: const Offset(-2, -2),
-          ),
-        ],
         border: Border.all(
           color: AppColors.sectionSeparator.withValues(alpha: 0.65),
-          width: 1.4,
+          width: 1.2,
         ),
       ),
       child: Icon(
         Icons.person_rounded,
-        size: 56,
+        size: 46,
         color: AppColors.textShade.withValues(alpha: 0.75),
       ),
     );
@@ -374,286 +417,267 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-          child: SingleChildScrollView(
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.sectionBackground.withValues(alpha: 0.42),
-                    AppColors.sectionBackground.withValues(alpha: 0.25),
-                  ],
-                ),
-                border: Border.all(
-                  color: AppColors.textShade.withValues(alpha: 0.15),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 22,
-                    offset: const Offset(0, 12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - 26),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    color: AppColors.sectionBackground.withValues(alpha: 0.30),
+                    border: Border.all(
+                      color: AppColors.textShade.withValues(alpha: 0.14),
+                    ),
                   ),
-                ],
-              ),
-              child: Form(
-                key: _formKey,
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                child: Column(
-                  children: [
-                    _buildTopIcon(),
-                    const SizedBox(height: 12),
-                    const Text(
-                      "Let’s set up your profile",
-                      style: TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primaryText,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      "Please enter your details to continue",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        color: AppColors.descriptionText,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    _buildFieldContainer(
-                      child: TextFormField(
-                        controller: fullNameCtrl,
-                        textInputAction: TextInputAction.next,
-                        decoration: _decor(
-                          "Full Name",
-                          prefix: const Icon(
-                            Icons.person_outline_rounded,
-                            color: AppColors.textShade,
+                  child: Form(
+                    key: _formKey,
+                    autovalidateMode: submitted
+                        ? AutovalidateMode.onUserInteraction
+                        : AutovalidateMode.disabled,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildTopIcon(),
+                        const SizedBox(height: 12),
+                        const Text(
+                          "Let’s set up your profile",
+                          style: TextStyle(
+                            fontSize: 18.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryText,
                           ),
                         ),
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        validator: _nameValidator,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                        const SizedBox(height: 16),
 
-                    _buildFieldContainer(
-                      child: TextFormField(
-                        controller: phoneCtrl,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(10),
-                        ],
-                        decoration: _decor(
-                          "Mobile",
-                          prefix: const Icon(
-                            Icons.phone_outlined,
-                            color: AppColors.textShade,
+                        TextFormField(
+                          controller: fullNameCtrl,
+                          textInputAction: TextInputAction.next,
+                          decoration: _decor(
+                            "Full Name",
+                            prefix: const Icon(
+                              Icons.person_outline_rounded,
+                              color: AppColors.textShade,
+                            ),
                           ),
+                          style: const TextStyle(
+                            color: AppColors.primaryText,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15.5,
+                          ),
+                          validator: _nameValidator,
                         ),
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        validator: _phoneValidator,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                        const SizedBox(height: 12),
 
-                    _buildFieldContainer(
-                      child: TextFormField(
-                        controller: emailCtrl,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        decoration: _decor(
-                          "Email",
-                          prefix: const Icon(
-                            Icons.mail_outline_rounded,
-                            color: AppColors.textShade,
+                        TextFormField(
+                          controller: phoneCtrl,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(10),
+                          ],
+                          decoration: _decor(
+                            "Mobile",
+                            prefix: const Icon(
+                              Icons.phone_outlined,
+                              color: AppColors.textShade,
+                            ),
                           ),
+                          style: const TextStyle(
+                            color: AppColors.primaryText,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15.5,
+                          ),
+                          validator: _phoneValidator,
                         ),
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        validator: _emailValidator,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                        const SizedBox(height: 12),
 
-                    _buildFieldContainer(
-                      child: TextFormField(
-                        controller: dobCtrl,
-                        readOnly: true,
-                        onTap: _pickDob,
-                        decoration: _decor(
-                          "DOB (YYYY-MM-DD)",
-                          prefix: const Icon(
-                            Icons.calendar_month_outlined,
-                            color: AppColors.textShade,
+                        TextFormField(
+                          controller: emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          onChanged: (_) {
+                            if (emailServerError != null) {
+                              setState(() => emailServerError = null);
+                            }
+                          },
+                          decoration: _decor(
+                            "Email",
+                            prefix: const Icon(
+                              Icons.mail_outline_rounded,
+                              color: AppColors.textShade,
+                            ),
+                            errorText: emailServerError,
                           ),
-                          suffix: IconButton(
-                            onPressed: _pickDob,
-                            icon: const Icon(
+                          style: const TextStyle(
+                            color: AppColors.primaryText,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15.5,
+                          ),
+                          validator: _emailValidator,
+                        ),
+                        const SizedBox(height: 12),
+
+                        TextFormField(
+                          controller: dobCtrl,
+                          readOnly: true,
+                          onTap: _pickDob,
+                          decoration: _decor(
+                            "DOB (YYYY-MM-DD)",
+                            prefix: const Icon(
+                              Icons.calendar_month_outlined,
+                              color: AppColors.textShade,
+                            ),
+                            suffix: IconButton(
+                              onPressed: _pickDob,
+                              icon: const Icon(
+                                Icons.chevron_right_rounded,
+                                color: AppColors.textShade,
+                              ),
+                            ),
+                          ),
+                          style: const TextStyle(
+                            color: AppColors.primaryText,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15.5,
+                          ),
+                          validator: _dobValidator,
+                        ),
+                        const SizedBox(height: 12),
+
+                        TextFormField(
+                          controller: addressCtrl,
+                          textInputAction: TextInputAction.next,
+                          decoration: _decor(
+                            "Address",
+                            prefix: const Icon(
+                              Icons.location_on_outlined,
+                              color: AppColors.textShade,
+                            ),
+                          ),
+                          style: const TextStyle(
+                            color: AppColors.primaryText,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15.5,
+                          ),
+                          validator: _addressValidator,
+                        ),
+                        const SizedBox(height: 12),
+
+                        DropdownButtonFormField<String>(
+                          initialValue: gender,
+                          items: genders
+                              .map(
+                                (g) => DropdownMenuItem<String>(
+                              value: g,
+                              child: Text(
+                                g,
+                                style: const TextStyle(
+                                  color: AppColors.primaryText,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15.5,
+                                ),
+                              ),
+                            ),
+                          )
+                              .toList(),
+                          onChanged: (v) => setState(() => gender = v),
+                          decoration: _decor(
+                            "Select Gender",
+                            prefix: const Icon(
+                              Icons.wc_rounded,
+                              color: AppColors.textShade,
+                            ),
+                            suffix: const Icon(
                               Icons.chevron_right_rounded,
                               color: AppColors.textShade,
                             ),
                           ),
+                          dropdownColor: AppColors.background,
+                          validator: (v) => (v == null || v.isEmpty)
+                              ? "Please select a gender"
+                              : null,
                         ),
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        validator: _dobValidator,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                        const SizedBox(height: 12),
 
-                    _buildFieldContainer(
-                      child: TextFormField(
-                        controller: addressCtrl,
-                        textInputAction: TextInputAction.next,
-                        decoration: _decor(
-                          "Address",
-                          prefix: const Icon(
-                            Icons.location_on_outlined,
-                            color: AppColors.textShade,
-                          ),
-                        ),
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        validator: _addressValidator,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    _buildFieldContainer(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: gender,
-                        items: genders
-                            .map(
-                              (g) => DropdownMenuItem<String>(
-                            value: g,
-                            child: Text(
-                              g,
-                              style: const TextStyle(
-                                color: AppColors.primaryText,
-                                fontWeight: FontWeight.w600,
+                        TextFormField(
+                          controller: passwordCtrl,
+                          obscureText: !showPassword,
+                          textInputAction: TextInputAction.done,
+                          decoration: _decor(
+                            "Password",
+                            prefix: const Icon(
+                              Icons.lock_outline_rounded,
+                              color: AppColors.textShade,
+                            ),
+                            suffix: IconButton(
+                              onPressed: () {
+                                setState(() => showPassword = !showPassword);
+                              },
+                              icon: Icon(
+                                showPassword
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
+                                color: AppColors.textShade,
                               ),
                             ),
                           ),
-                        )
-                            .toList(),
-                        onChanged: (v) => setState(() => gender = v),
-                        decoration: _decor(
-                          "Select Gender",
-                          prefix: const Icon(
-                            Icons.wc_rounded,
-                            color: AppColors.textShade,
+                          style: const TextStyle(
+                            color: AppColors.primaryText,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15.5,
                           ),
-                          suffix: const Icon(
-                            Icons.chevron_right_rounded,
-                            color: AppColors.textShade,
-                          ),
+                          validator: _passwordValidator,
                         ),
-                        dropdownColor: AppColors.background,
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? "Please select a gender"
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
 
-                    _buildFieldContainer(
-                      child: TextFormField(
-                        controller: passwordCtrl,
-                        obscureText: !showPassword,
-                        textInputAction: TextInputAction.done,
-                        decoration: _decor(
-                          "Password",
-                          prefix: const Icon(
-                            Icons.lock_outline_rounded,
-                            color: AppColors.textShade,
-                          ),
-                          suffix: IconButton(
-                            onPressed: () {
-                              setState(() => showPassword = !showPassword);
-                            },
-                            icon: Icon(
-                              showPassword
-                                  ? Icons.visibility_off_rounded
-                                  : Icons.visibility_rounded,
-                              color: AppColors.textShade,
+                        const SizedBox(height: 16),
+
+                        SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: ElevatedButton(
+                            onPressed: loading ? null : register,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor:
+                              AppColors.primary.withValues(alpha: 0.6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: loading
+                                ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                                : const Text(
+                              "Continue",
+                              style: TextStyle(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        validator: _passwordValidator,
-                      ),
+
+                        const SizedBox(height: 14),
+                        _stepDots(),
+                      ],
                     ),
-
-                    const SizedBox(height: 22),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: loading ? null : register,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor:
-                          AppColors.primary.withValues(alpha: 0.6),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          elevation: 4,
-                          shadowColor:
-                          AppColors.primary.withValues(alpha: 0.30),
-                        ),
-                        child: loading
-                            ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.4,
-                            color: Colors.white,
-                          ),
-                        )
-                            : const Text(
-                          "Continue",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 18),
-                    _stepDots(),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
