@@ -3,6 +3,7 @@ import '../../core/session/session_manager.dart';
 import '../dashboard/app_colors.dart';
 import '../dashboard/settings_screen.dart';
 import '../dashboard/dashboard_service.dart';
+import '../elder/services/notification_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -24,6 +25,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState(){
     super.initState();
     _loadDashboard();
+    NotificationService.init();
+    NotificationService.scheduleWeeklyReminder();
   }
 
   Future<void> _loadDashboard() async{
