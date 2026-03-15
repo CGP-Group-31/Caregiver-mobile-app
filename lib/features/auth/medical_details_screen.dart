@@ -1,32 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
+//import 'package:dio/dio.dart';
 
 import 'medicine_reminders_screen.dart';
 import 'doctor_service.dart';
-import '../../../core/network/dio_client.dart'; // adjust if your path differs
+import '../../../core/network/dio_client.dart';
+import 'theme.dart';
 
 class MedicalDetailsScreen extends StatefulWidget {
   final int elderId;
 
-  const MedicalDetailsScreen({
-    super.key,
-    required this.elderId,
-  });
+  const MedicalDetailsScreen({super.key, required this.elderId});
 
   @override
   State<MedicalDetailsScreen> createState() => _MedicalDetailsScreenState();
 }
 
 class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
-
-  static const Color cPrimary = Color(0xFF2E7D7A); // teal
-  static const Color cBg = Color(0xFFD6EFE6); // light mint background
-  static const Color cMint = Color(0xFFBEE8DA); // mint
-  static const Color cSurface = Color(0xFFF6F7F3); // off white
-  static const Color cTextDark = Color(0xFF243333); // dark
-  static const Color cGrey1 = Color(0xFF6F7F7D); // grey
-  static const Color cGrey2 = Color(0xFF7C8B89); // grey
-
   final _formKey = GlobalKey<FormState>();
 
   String? bloodType;
@@ -35,12 +24,12 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
   final chronicCtrl = TextEditingController();
   final notesCtrl = TextEditingController();
   final surgeriesCtrl = TextEditingController();
-
-
   final preferredDoctorCtrl = TextEditingController();
+
   DoctorItem? selectedDoctor;
 
   bool loading = false;
+  bool submitted = false;
 
   final List<String> bloodTypes = const [
     "A+",
@@ -51,7 +40,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
     "O-",
     "AB+",
     "AB-",
-    "Unknown",
+    "Unknown"
   ];
 
   @override
@@ -64,57 +53,120 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
     super.dispose();
   }
 
-  InputDecoration _decor(String hint, {Widget? suffix}) {
+  InputDecoration _decor(String hint, {Widget? suffix, Widget? prefix}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: cGrey1, fontWeight: FontWeight.w500),
+      hintStyle: const TextStyle(
+        color: AppColors.descriptionText,
+        fontWeight: FontWeight.w500,
+      ),
       filled: true,
-      fillColor: cSurface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      fillColor: AppColors.containerBackground,
+      prefixIcon: prefix,
       suffixIcon: suffix,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: cGrey2.withValues(alpha: 0.35), width: 1),
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: AppColors.textShade.withValues(alpha: 0.30),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: cPrimary, width: 1.6),
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(color: Colors.redAccent),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         borderSide: const BorderSide(color: Colors.redAccent, width: 1.6),
       ),
+      errorStyle: const TextStyle(
+        color: Colors.redAccent,
+        fontSize: 12.2,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
+  Widget _fieldCard({required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: child,
     );
   }
 
   Widget _stepDots() {
     const int total = 6;
-    const int active = 2;
+    const int active = 3;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(total, (i) {
-        final bool filled = (i < active);
+        final filled = i < active;
         return Container(
           width: 10,
           height: 10,
           margin: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: filled ? cTextDark : cGrey2.withValues(alpha: 0.35),
+            color: filled
+                ? AppColors.primaryText
+                : AppColors.textShade.withValues(alpha: 0.35),
           ),
         );
       }),
     );
   }
 
-  String? _optionalMax(String? v, int max, String fieldName) {
-    if (v == null || v.trim().isEmpty) return null; // optional
-    if (v.trim().length > max) return "$fieldName is too long (max $max chars)";
+  String? _allergyValidator(String? v) {
+    final t = v?.trim() ?? "";
+    if (t.isEmpty) return null;
+    if (!RegExp(r'^[A-Za-z\s,.!]+$').hasMatch(t)) {
+      return "Only letters and , . ! are allowed";
+    }
+    if (t.length > 120) return "Too long";
+    return null;
+  }
+
+  String? _chronicValidator(String? v) {
+    final t = v?.trim() ?? "";
+    if (t.isEmpty) return null;
+    if (!RegExp(r'^[A-Za-z0-9\s,]+$').hasMatch(t)) {
+      return "No symbols allowed";
+    }
+    if (t.length > 140) return "Too long";
+    return null;
+  }
+
+  String? _notesValidator(String? v) {
+    final t = v?.trim() ?? "";
+    if (t.isEmpty) return null;
+    if (!RegExp(r'^[A-Za-z0-9\s,.!]+$').hasMatch(t)) {
+      return "Only letters, numbers and , . ! are allowed";
+    }
+    if (t.length > 200) return "Too long";
+    return null;
+  }
+
+  String? _surgeryValidator(String? v) {
+    final t = v?.trim() ?? "";
+    if (t.isEmpty) return null;
+    if (!RegExp(r'^[A-Za-z0-9\s,]+$').hasMatch(t)) {
+      return "No symbols allowed";
+    }
+    if (t.length > 200) return "Too long";
     return null;
   }
 
@@ -123,13 +175,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
 
     final picked = await showSearch<DoctorItem?>(
       context: context,
-      delegate: DoctorSearchDelegate(
-        primary: cPrimary,
-        surface: cSurface,
-        textDark: cTextDark,
-        grey1: cGrey1,
-        grey2: cGrey2,
-      ),
+      delegate: DoctorSearchDelegate(),
     );
 
     if (!mounted) return;
@@ -142,9 +188,9 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
     }
   }
 
-  // API CALL
   Future<void> _submitMedicalDetailsToApi() async {
     final dio = DioClient.dio;
+
     final payload = {
       "elder_id": widget.elderId,
       "blood_type": bloodType ?? "",
@@ -155,56 +201,36 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
       "preferred_doctor_id": selectedDoctor?.doctorId ?? 0,
     };
 
-    try {
+    final res = await dio.post(
+      "/api/v1/caregiver/elder-create/elder-profile",
+      data: payload,
+    );
 
-      final res = await dio.post(
-        "/api/v1/caregiver/elder-create/elder-profile",
-        data: payload,
-      );
+    final ok =
+        res.statusCode != null && res.statusCode! >= 200 && res.statusCode! < 300;
 
-      // If backend returns 200/201 etc, treat as success
-      final ok = res.statusCode != null && res.statusCode! >= 200 && res.statusCode! < 300;
-      if (!ok) {
-        throw Exception("Failed with status: ${res.statusCode}");
-      }
-    } on DioException catch (e) {
-      final status = e.response?.statusCode;
-      final data = e.response?.data;
-
-      if (status == 422) {
-        throw Exception("Please check the details you entered (validation error).");
-      } else if (status == 404) {
-
-        throw Exception(data is Map && data["detail"] != null
-            ? data["detail"].toString()
-            : "Resource not found.");
-      } else if (status == 500) {
-        throw Exception("Server error. Please try again.");
-      } else {
-        throw Exception(
-          data is Map && data["detail"] != null ? data["detail"].toString() : "Something went wrong.",
-        );
-      }
+    if (!ok) {
+      throw Exception("Failed");
     }
   }
 
   Future<void> _continue() async {
     FocusScope.of(context).unfocus();
 
-    final valid = _formKey.currentState?.validate() ?? false;
-    if (!valid) return;
+    setState(() {
+      submitted = true;
+    });
+
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     if (selectedDoctor == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a doctor")),
-      );
+      _formKey.currentState?.validate();
       return;
     }
 
     setState(() => loading = true);
 
     try {
-
       await _submitMedicalDetailsToApi();
 
       if (!mounted) return;
@@ -217,6 +243,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
       );
@@ -228,9 +255,10 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: cBg,
+      backgroundColor: AppColors.mainBackground,
       appBar: AppBar(
-        backgroundColor: cPrimary,
+        automaticallyImplyLeading: false,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
@@ -246,156 +274,152 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: cMint.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: cGrey2.withValues(alpha: 0.35)),
+                      color: AppColors.sectionBackground.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: AppColors.textShade.withValues(alpha: 0.20),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        )
+                      ],
                     ),
                     child: Form(
                       key: _formKey,
+                      autovalidateMode: submitted
+                          ? AutovalidateMode.onUserInteraction
+                          : AutovalidateMode.disabled,
                       child: Column(
                         children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: bloodType,
-                            items: bloodTypes
-                                .map(
-                                  (b) => DropdownMenuItem(
-                                value: b,
-                                child: Text(
-                                  b,
-                                  style: const TextStyle(
-                                    color: cTextDark,
-                                    fontWeight: FontWeight.w600,
+                          _fieldCard(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: bloodType,
+                              items: bloodTypes
+                                  .map(
+                                    (b) => DropdownMenuItem(
+                                  value: b,
+                                  child: Text(
+                                    b,
+                                    style: const TextStyle(
+                                      color: AppColors.primaryText,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
+                              )
+                                  .toList(),
+                              onChanged: (v) => setState(() => bloodType = v),
+                              decoration: _decor(
+                                "Blood Type",
+                                prefix: const Icon(Icons.bloodtype_outlined),
                               ),
-                            )
-                                .toList(),
-                            onChanged: (v) => setState(() => bloodType = v),
-                            decoration: _decor(
-                              "Blood Type...",
-                              suffix: const Icon(Icons.chevron_right_rounded,
-                                  color: cGrey2),
+                              validator: (v) =>
+                              v == null ? "Please select blood type" : null,
                             ),
-                            dropdownColor: cSurface,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) {
-                                return "Please select a blood type";
-                              }
-                              return null;
-                            },
                           ),
-                          const SizedBox(height: 12),
-
-                          TextFormField(
-                            controller: allergiesCtrl,
-                            decoration: _decor("Allergies..."),
-                            style: const TextStyle(
-                              color: cTextDark,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(height: 14),
+                          _fieldCard(
+                            child: TextFormField(
+                              controller: allergiesCtrl,
+                              decoration: _decor(
+                                "Allergies",
+                                prefix:
+                                const Icon(Icons.warning_amber_outlined),
+                              ),
+                              validator: _allergyValidator,
                             ),
-                            validator: (v) => _optionalMax(v, 120, "Allergies"),
                           ),
-                          const SizedBox(height: 12),
-
-                          TextFormField(
-                            controller: chronicCtrl,
-                            decoration: _decor("Chronic Conditions..."),
-                            style: const TextStyle(
-                              color: cTextDark,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(height: 14),
+                          _fieldCard(
+                            child: TextFormField(
+                              controller: chronicCtrl,
+                              decoration: _decor(
+                                "Chronic Conditions",
+                                prefix: const Icon(Icons.healing_outlined),
+                              ),
+                              validator: _chronicValidator,
                             ),
-                            validator: (v) =>
-                                _optionalMax(v, 140, "Chronic Conditions"),
                           ),
-                          const SizedBox(height: 12),
-
-                          TextFormField(
-                            controller: notesCtrl,
-                            maxLines: 2,
-                            decoration: _decor("Important Notes..."),
-                            style: const TextStyle(
-                              color: cTextDark,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(height: 14),
+                          _fieldCard(
+                            child: TextFormField(
+                              controller: notesCtrl,
+                              maxLines: 2,
+                              decoration: _decor(
+                                "Emergency Notes",
+                                prefix: const Icon(Icons.note_alt_outlined),
+                              ),
+                              validator: _notesValidator,
                             ),
-                            validator: (v) =>
-                                _optionalMax(v, 200, "Important Notes"),
                           ),
-                          const SizedBox(height: 12),
-
-                          TextFormField(
-                            controller: surgeriesCtrl,
-                            maxLines: 2,
-                            decoration: _decor("Past Surgeries..."),
-                            style: const TextStyle(
-                              color: cTextDark,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(height: 14),
+                          _fieldCard(
+                            child: TextFormField(
+                              controller: surgeriesCtrl,
+                              maxLines: 2,
+                              decoration: _decor(
+                                "Past Surgeries",
+                                prefix:
+                                const Icon(Icons.local_hospital_outlined),
+                              ),
+                              validator: _surgeryValidator,
                             ),
-                            validator: (v) =>
-                                _optionalMax(v, 200, "Past Surgeries"),
                           ),
-                          const SizedBox(height: 12),
-
-                          TextFormField(
-                            controller: preferredDoctorCtrl,
-                            readOnly: true,
-                            onTap: _openDoctorSearch,
-                            decoration: _decor(
-                              "Preferred Doctor",
-                              suffix: const Icon(Icons.search_rounded,
-                                  color: cGrey2),
+                          const SizedBox(height: 14),
+                          _fieldCard(
+                            child: TextFormField(
+                              controller: preferredDoctorCtrl,
+                              readOnly: true,
+                              onTap: _openDoctorSearch,
+                              decoration: _decor(
+                                "Preferred Doctor",
+                                prefix: const Icon(
+                                    Icons.medical_services_outlined),
+                                suffix: const Icon(Icons.search),
+                              ),
+                              validator: (v) {
+                                if (selectedDoctor == null) {
+                                  return "Please select a doctor";
+                                }
+                                return null;
+                              },
                             ),
-                            style: const TextStyle(
-                              color: cTextDark,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            validator: (v) {
-                              final err =
-                              _optionalMax(v, 80, "Preferred Doctor");
-                              if (err != null) return err;
-
-                              if (selectedDoctor == null) {
-                                return "Please select a doctor";
-                              }
-                              return null;
-                            },
                           ),
-
-                          const SizedBox(height: 18),
-
+                          const SizedBox(height: 22),
                           SizedBox(
                             width: double.infinity,
-                            height: 52,
+                            height: 54,
                             child: ElevatedButton(
                               onPressed: loading ? null : _continue,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: cPrimary,
+                                backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
+                                disabledForegroundColor:
+                                Colors.white.withValues(alpha: 0.8),
+                                disabledBackgroundColor:
+                                AppColors.primary.withValues(alpha: 0.6),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(18),
                                 ),
-                                elevation: 0,
                               ),
                               child: loading
-                                  ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
+                                  ? const CircularProgressIndicator(
+                                  color: Colors.white)
                                   : const Text(
                                 "Continue",
                                 style: TextStyle(
+                                  color: Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 16),
                           _stepDots(),
                         ],
@@ -403,7 +427,7 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
                     ),
                   ),
                 ),
-              ),
+              )
             ],
           ),
         ),
@@ -412,36 +436,23 @@ class _MedicalDetailsScreenState extends State<MedicalDetailsScreen> {
   }
 }
 
-
 class DoctorSearchDelegate extends SearchDelegate<DoctorItem?> {
-  DoctorSearchDelegate({
-    required this.primary,
-    required this.surface,
-    required this.textDark,
-    required this.grey1,
-    required this.grey2,
-  });
-
-  final Color primary;
-  final Color surface;
-  final Color textDark;
-  final Color grey1;
-  final Color grey2;
+  @override
+  String get searchFieldLabel => "Search Doctor";
 
   @override
-  String get searchFieldLabel => "Search doctor name";
-
-  @override
-  TextStyle? get searchFieldStyle =>
-      const TextStyle(color: Colors.white, fontWeight: FontWeight.w600);
+  TextStyle? get searchFieldStyle => const TextStyle(
+    color: Colors.white,
+    fontWeight: FontWeight.w600,
+  );
 
   @override
   ThemeData appBarTheme(BuildContext context) {
     final base = Theme.of(context);
     return base.copyWith(
-      scaffoldBackgroundColor: surface,
-      appBarTheme: AppBarTheme(
-        backgroundColor: primary,
+      scaffoldBackgroundColor: AppColors.containerBackground,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -451,7 +462,10 @@ class DoctorSearchDelegate extends SearchDelegate<DoctorItem?> {
         selectionHandleColor: Colors.white,
       ),
       inputDecorationTheme: InputDecorationTheme(
-        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+        hintStyle: TextStyle(
+          color: Colors.white.withValues(alpha: 0.75),
+          fontWeight: FontWeight.w500,
+        ),
         border: InputBorder.none,
       ),
     );
@@ -474,45 +488,29 @@ class DoctorSearchDelegate extends SearchDelegate<DoctorItem?> {
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    return _DoctorResultsNice(
+    return _DoctorResults(
       query: query,
-      surface: surface,
-      textDark: textDark,
-      grey1: grey1,
-      primary: primary,
-      onPick: (d) => close(context, d),
+      onPick: (doctor) => close(context, doctor),
     );
   }
 
   @override
   Widget buildResults(BuildContext context) {
-    return _DoctorResultsNice(
+    return _DoctorResults(
       query: query,
-      surface: surface,
-      textDark: textDark,
-      grey1: grey1,
-      primary: primary,
-      onPick: (d) => close(context, d),
+      onPick: (doctor) => close(context, doctor),
     );
   }
 }
 
-class _DoctorResultsNice extends StatelessWidget {
-  const _DoctorResultsNice({
+class _DoctorResults extends StatelessWidget {
+  final String query;
+  final void Function(DoctorItem doctor) onPick;
+
+  const _DoctorResults({
     required this.query,
-    required this.surface,
-    required this.textDark,
-    required this.grey1,
-    required this.primary,
     required this.onPick,
   });
-
-  final String query;
-  final Color surface;
-  final Color textDark;
-  final Color grey1;
-  final Color primary;
-  final void Function(DoctorItem doctor) onPick;
 
   @override
   Widget build(BuildContext context) {
@@ -525,7 +523,7 @@ class _DoctorResultsNice extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
             decoration: BoxDecoration(
-              color: primary.withValues(alpha: 0.10),
+              color: AppColors.primary.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
@@ -534,24 +532,24 @@ class _DoctorResultsNice extends StatelessWidget {
                 Icon(
                   Icons.search_rounded,
                   size: 40,
-                  color: primary.withValues(alpha: 0.9),
+                  color: AppColors.primary.withValues(alpha: 0.9),
                 ),
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   "Start typing a doctor's name",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: textDark,
+                    color: AppColors.primaryText,
                     fontSize: 15.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  "Results will appear here as you type.",
+                  "Search results will appear here.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: textDark.withValues(alpha: 0.65),
+                    color: AppColors.primaryText.withValues(alpha: 0.65),
                     fontSize: 13.5,
                     fontWeight: FontWeight.w500,
                   ),
@@ -594,15 +592,17 @@ class _DoctorResultsNice extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: surface,
+                  color: AppColors.containerBackground,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: grey1.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: AppColors.descriptionText.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Text(
                   "No doctors found for \"$q\"",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: textDark.withValues(alpha: 0.75),
+                    color: AppColors.primaryText.withValues(alpha: 0.75),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -624,7 +624,7 @@ class _DoctorResultsNice extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Material(
-                color: surface,
+                color: AppColors.containerBackground,
                 borderRadius: BorderRadius.circular(16),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
@@ -633,7 +633,10 @@ class _DoctorResultsNice extends StatelessWidget {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: grey1.withValues(alpha: 0.18)),
+                      border: Border.all(
+                        color:
+                        AppColors.descriptionText.withValues(alpha: 0.18),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -641,12 +644,12 @@ class _DoctorResultsNice extends StatelessWidget {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: primary.withValues(alpha: 0.12),
+                            color: AppColors.primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
                             Icons.medical_services_rounded,
-                            color: primary.withValues(alpha: 0.95),
+                            color: AppColors.primary.withValues(alpha: 0.95),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -656,8 +659,8 @@ class _DoctorResultsNice extends StatelessWidget {
                             children: [
                               Text(
                                 d.fullName,
-                                style: TextStyle(
-                                  color: textDark,
+                                style: const TextStyle(
+                                  color: AppColors.primaryText,
                                   fontWeight: FontWeight.w900,
                                   fontSize: 15.5,
                                 ),
@@ -667,17 +670,18 @@ class _DoctorResultsNice extends StatelessWidget {
                                 spacing: 8,
                                 runSpacing: 6,
                                 children: [
-                                  _chip(spec, isPrimary: true, textDark: textDark),
-                                  if (hospital.isNotEmpty)
-                                    _chip(hospital, isPrimary: false, textDark: textDark),
+                                  _chip(spec, true),
+                                  if (hospital.isNotEmpty) _chip(hospital, false),
                                 ],
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Icon(Icons.chevron_right_rounded,
-                            color: textDark.withValues(alpha: 0.55)),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.primaryText.withValues(alpha: 0.55),
+                        ),
                       ],
                     ),
                   ),
@@ -690,19 +694,19 @@ class _DoctorResultsNice extends StatelessWidget {
     );
   }
 
-  Widget _chip(String text, {required bool isPrimary, required Color textDark}) {
+  Widget _chip(String text, bool primary) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isPrimary
-            ? primary.withValues(alpha: 0.12)
-            : grey1.withValues(alpha: 0.12),
+        color: primary
+            ? AppColors.primary.withValues(alpha: 0.12)
+            : AppColors.descriptionText.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: isPrimary ? primary : textDark,
+          color: primary ? AppColors.primary : AppColors.primaryText,
           fontWeight: FontWeight.w700,
           fontSize: 12.5,
         ),

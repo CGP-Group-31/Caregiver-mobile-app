@@ -16,6 +16,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
   final MessageService _service = MessageService();
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
+  bool _isNearBottom = true;
+  bool _showScrollToBottom = false;
+  int _newMessageCount = 0;
+
 
   Timer? _pollTimer;
 
@@ -32,11 +36,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
   void initState(){
     super.initState();
     _initAndLoad();
+    _scrollCtrl.addListener(_handleScroll);
   }
 
   @override
   void dispose(){
     _pollTimer?.cancel();
+    _scrollCtrl.removeListener(_handleScroll);
     _textCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -94,7 +100,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       });
 
       await _markIncomingAsRead(list);
-      _scrollToBottom();
+      _scrollToBottom(animated: false);
     } catch (e) {
       setState(() {
         _loading = false;
@@ -124,6 +130,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
           final exists = _messages.any((m) => m.messageId == msg.messageId);
           if(!exists){
             _messages.add(msg);
+
+            final isIncoming = msg.senderId != _myId;
+            if(!_isNearBottom && isIncoming){
+              _newMessageCount++;
+              _showScrollToBottom = true;
+            }
           }
         }
 
@@ -132,8 +144,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
         }
       });
 
+      if(_isNearBottom){
+        _scrollToBottom();
+      }
+
       await _markIncomingAsRead(list);
-      _scrollToBottom();
     } catch (_) {
 
     }
@@ -183,16 +198,42 @@ class _MessagesScreenState extends State<MessagesScreen> {
       }
     }
 
-    void _scrollToBottom() {
-      if(!_scrollCtrl.hasClients) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if(!_scrollCtrl.hasClients) return;
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-        );
+    void _scrollToBottom({bool animated = true}) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await Future.delayed(const Duration(milliseconds: 80));
+        if (!_scrollCtrl.hasClients) return;
+
+        final target = _scrollCtrl.position.maxScrollExtent;
+
+        if(animated) {
+          _scrollCtrl.animateTo(
+            target,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
+        } else {
+          _scrollCtrl.jumpTo(target);
+        }
       });
+    }
+
+    void _handleScroll() {
+      if (!_scrollCtrl.hasClients) return;
+
+      final distanceFromBottom = _scrollCtrl.position.maxScrollExtent - _scrollCtrl.offset;
+
+      final nearBottom = distanceFromBottom < 120;
+
+      if (nearBottom != _isNearBottom) {
+        setState(() {
+          _isNearBottom = nearBottom;
+
+          if (_isNearBottom) {
+            _showScrollToBottom = false;
+            _newMessageCount = 0;
+          }
+        });
+      }
     }
 
     @override
@@ -222,10 +263,61 @@ class _MessagesScreenState extends State<MessagesScreen> {
             ? const Center(child: CircularProgressIndicator())
             : _error != null
                 ? _errorView()
-                : Column(
+                : Stack(
                     children: [
-                      Expanded(child: _messagesList()),
-                      _composer(),
+                      Column(
+                        children: [
+                          Expanded(child: _messagesList()),
+                          _composer(),
+                        ],
+                      ),
+                      if (_showScrollToBottom)
+                        Positioned(
+                          right: 16,
+                          bottom: MediaQuery.of(context).padding.bottom + 110,
+                          child: GestureDetector(
+                            onTap: () {
+                              _scrollToBottom();
+                              setState(() {
+                                _showScrollToBottom = false;
+                                _newMessageCount = 0;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.12),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "$_newMessageCount",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
       );

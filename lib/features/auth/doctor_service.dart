@@ -4,14 +4,6 @@ import '../../../core/network/dio_client.dart';
 class DoctorService {
   static final Dio _dio = DioClient.dio;
 
-  /// POST /api/v1/caregiver/elder-create/search-doctors
-  /// Request body:
-  /// {
-  ///   "doctor_name": "string",
-  ///   "hospital": "string"
-  /// }
-  ///
-  /// Backend uses 404 for "No doctors found" -> we treat it as EMPTY list.
   static Future<List<DoctorItem>> searchDoctors({
     required String doctorName,
     String hospital = "",
@@ -19,7 +11,7 @@ class DoctorService {
     final name = doctorName.trim();
     final hosp = hospital.trim();
 
-    // If both empty, don't call API
+    // If both are empty, don't call the API
     if (name.isEmpty && hosp.isEmpty) return [];
 
     try {
@@ -30,14 +22,11 @@ class DoctorService {
           "hospital": hosp,
         },
         options: Options(
-          // ✅ Accept normal 2xx AND 404 as "valid" responses
-          // because backend uses 404 for "No doctors found"
           validateStatus: (code) =>
           code != null && ((code >= 200 && code < 300) || code == 404),
         ),
       );
 
-      // ✅ 404 => no results
       if (response.statusCode == 404) return [];
 
       final data = response.data;
@@ -48,7 +37,6 @@ class DoctorService {
           .map((e) => DoctorItem.fromJson(e as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
-      // ✅ If we ever get a 404 without validateStatus catching it, still handle.
       if (e.response?.statusCode == 404) return [];
 
       throw Exception(e.response?.data ?? "Doctor search failed");
