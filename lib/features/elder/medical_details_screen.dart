@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 
 import '../auth/medicine_reminders_screen.dart';
 import '../auth/doctor_service.dart';
-import '../../../core/network/dio_client.dart'; // adjust if your path differs
+import '../../../core/network/dio_client.dart';
 
 class MedicalDetailsScreen extends StatefulWidget {
   final int elderId;
