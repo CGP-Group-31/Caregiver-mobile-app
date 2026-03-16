@@ -16,7 +16,6 @@ class EditMedicineScreen extends StatefulWidget {
 }
 
 class _EditMedicineScreenState extends State<EditMedicineScreen> {
-
   final _formKey = GlobalKey<FormState>();
 
   final nameCtrl = TextEditingController();
@@ -39,61 +38,99 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
     loadMedicine();
   }
 
+  @override
+  void dispose() {
+    nameCtrl.dispose();
+    dosageCtrl.dispose();
+    instructionsCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> loadMedicine() async {
+    try {
+      final data = await MedicineService.getMedicineById(widget.medicineId);
 
-    final data = await MedicineService.getMedicineById(widget.medicineId);
+      nameCtrl.text = (data["name"] ?? "").toString();
+      dosageCtrl.text = (data["dosage"] ?? "").toString();
+      instructionsCtrl.text = (data["instructions"] ?? "").toString();
 
-    nameCtrl.text = data["name"];
-    dosageCtrl.text = data["dosage"];
-    instructionsCtrl.text = data["instructions"];
+      final rawTimes = data["times"] as List? ?? [];
+      times = rawTimes.map((e) => e.toString()).toList();
 
-    times = List<String>.from(data["times"]);
-    repeatDays = data["repeatDays"];
+      repeatDays = (data["repeatDays"] ?? "Daily").toString();
 
-    startDate = DateTime.parse(data["startDate"]);
+      if (data["startDate"] != null) {
+        startDate = DateTime.parse(data["startDate"].toString());
+      }
 
-    if (data["endDate"] != null) {
-      endDate = DateTime.parse(data["endDate"]);
+      if (data["endDate"] != null) {
+        endDate = DateTime.parse(data["endDate"].toString());
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
-
-    setState(() {
-      loading = false;
-    });
   }
 
   Future<void> pickTime() async {
-
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child ?? const SizedBox(),
+        );
+      },
     );
 
     if (picked != null) {
-
       final formatted =
-          "${picked.hour.toString().padLeft(2,'0')}:${picked.minute.toString().padLeft(2,'0')}";
+          "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
 
       setState(() {
-        times.clear();
-        times.add(formatted);
+        if (!times.contains(formatted)) {
+          times.add(formatted);
+          times.sort();
+        }
       });
     }
   }
 
+  void removeTime(String time) {
+    setState(() {
+      times.remove(time);
+    });
+  }
+
   Future<void> pickDate(bool isStart) async {
+    final initial = isStart
+        ? (startDate ?? DateTime.now())
+        : (endDate ?? startDate ?? DateTime.now());
 
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
+      initialDate: initial,
+      firstDate: isStart ? DateTime.now() : (startDate ?? DateTime.now()),
       lastDate: DateTime(2100),
     );
 
     if (picked != null) {
-
       setState(() {
         if (isStart) {
           startDate = picked;
+
+          if (endDate != null && endDate!.isBefore(startDate!)) {
+            endDate = startDate;
+          }
         } else {
           endDate = picked;
         }
@@ -102,32 +139,64 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
   }
 
   Future<void> updateMedicine() async {
-
     if (!_formKey.currentState!.validate()) return;
+
+    if (times.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please add at least one reminder time")),
+      );
+      return;
+    }
+
+    if (startDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select a start date")),
+      );
+      return;
+    }
 
     setState(() {
       saving = true;
     });
 
-    await MedicineService.updateMedicine(
-      medicineId: widget.medicineId,
-      name: nameCtrl.text,
-      dosage: dosageCtrl.text,
-      instructions: instructionsCtrl.text,
-      times: times,
-      repeatDays: repeatDays,
-      startDate: DateFormat('yyyy-MM-dd').format(startDate!),
-      endDate: endDate == null
-          ? null
-          : DateFormat('yyyy-MM-dd').format(endDate!),
-    );
+    try {
+      await MedicineService.updateMedicine(
+        medicineId: widget.medicineId,
+        name: nameCtrl.text.trim(),
+        dosage: dosageCtrl.text.trim(),
+        instructions: instructionsCtrl.text.trim(),
+        times: times,
+        repeatDays: repeatDays,
+        startDate: DateFormat('yyyy-MM-dd').format(startDate!),
+        endDate: endDate == null
+            ? null
+            : DateFormat('yyyy-MM-dd').format(endDate!),
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text("Medicine Updated")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Medicine Updated")),
+      );
 
-    Navigator.pop(context);
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+
+      final msg = e.toString().replaceFirst("Exception: ", "");
+      final parts = msg.split("|");
+      final userMsg = parts.length > 1 ? parts[1] : msg;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(userMsg)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          saving = false;
+        });
+      }
+    }
   }
 
   Widget inputField({
@@ -138,7 +207,7 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
-      validator: (v) => v == null || v.isEmpty ? "Required" : null,
+      validator: (v) => v == null || v.trim().isEmpty ? "Required" : null,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: AppColors.textShade),
@@ -171,9 +240,67 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
     );
   }
 
+  Widget buildTimeChips() {
+    if (times.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.sectionBackground,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Text(
+          "No times added yet",
+          style: TextStyle(color: AppColors.textShade),
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: times.map((time) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.access_time, size: 18, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                time,
+                style: const TextStyle(
+                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () => removeTime(time),
+                borderRadius: BorderRadius.circular(20),
+                child: const Padding(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Colors.redAccent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-
     if (loading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -182,19 +309,15 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.mainBackground,
-
       appBar: AppBar(
         title: const Text("Edit Medicine"),
         backgroundColor: AppColors.primary,
       ),
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
-
           child: Container(
             padding: const EdgeInsets.all(20),
-
             decoration: BoxDecoration(
               color: AppColors.containerBackground,
               borderRadius: BorderRadius.circular(20),
@@ -202,68 +325,59 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
-                  offset: const Offset(0,5),
+                  offset: const Offset(0, 5),
                 )
               ],
             ),
-
             child: Form(
               key: _formKey,
-
               child: ListView(
                 children: [
-
                   inputField(
                     controller: nameCtrl,
                     label: "Medicine Name",
                   ),
-
                   const SizedBox(height: 16),
-
                   inputField(
                     controller: dosageCtrl,
                     label: "Dosage",
                   ),
-
                   const SizedBox(height: 16),
-
                   inputField(
                     controller: instructionsCtrl,
                     label: "Instructions",
                     maxLines: 3,
                   ),
-
                   const SizedBox(height: 24),
-
                   const Text(
-                    "Reminder Time",
+                    "Reminder Times",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: AppColors.primaryText,
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: pickTime,
+                      icon: const Icon(Icons.add_alarm, color: Colors.white),
+                      label: const Text(
+                        "Add Time (24H)",
+                        style: TextStyle(color: Colors.white),
                       ),
                     ),
-                    onPressed: pickTime,
-                    icon: const Icon(Icons.access_time, color: Colors.white),
-                    label: Text(
-                      times.isEmpty
-                          ? "Select Time"
-                          : "Time: ${times.first}",
-                      style: const TextStyle(color: Colors.white),
-                    ),
                   ),
-
+                  const SizedBox(height: 12),
+                  buildTimeChips(),
                   const SizedBox(height: 20),
-
                   const Text(
                     "Duration",
                     style: TextStyle(
@@ -271,37 +385,37 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
                       color: AppColors.primaryText,
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
                   dateTile(
                     title: startDate == null
                         ? "Select Start Date"
                         : DateFormat('yyyy-MM-dd').format(startDate!),
                     onTap: () => pickDate(true),
                   ),
-
                   const SizedBox(height: 10),
-
                   dateTile(
                     title: endDate == null
                         ? "Select End Date"
                         : DateFormat('yyyy-MM-dd').format(endDate!),
                     onTap: () => pickDate(false),
                   ),
-
                   const SizedBox(height: 20),
-
-                  DropdownButtonFormField(
+                  DropdownButtonFormField<String>(
                     value: repeatDays,
                     items: const [
-                      DropdownMenuItem(value: "Daily", child: Text("Daily")),
                       DropdownMenuItem(
-                          value: "EveryOtherDay",
-                          child: Text("Every Other Day")),
+                        value: "Daily",
+                        child: Text("Daily"),
+                      ),
+                      DropdownMenuItem(
+                        value: "EveryOtherDay",
+                        child: Text("Every Other Day"),
+                      ),
                     ],
                     onChanged: (v) {
-                      repeatDays = v.toString();
+                      setState(() {
+                        repeatDays = v ?? "Daily";
+                      });
                     },
                     decoration: InputDecoration(
                       labelText: "Repeat",
@@ -313,9 +427,7 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -324,12 +436,18 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        padding:
-                        const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: saving ? null : updateMedicine,
                       child: saving
-                          ? const CircularProgressIndicator(color: Colors.white)
+                          ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.4,
+                        ),
+                      )
                           : const Text(
                         "Update Medicine",
                         style: TextStyle(
