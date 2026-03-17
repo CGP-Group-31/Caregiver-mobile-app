@@ -310,8 +310,20 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
     return Scaffold(
       backgroundColor: AppColors.mainBackground,
       appBar: AppBar(
-        title: const Text("Edit Medicine"),
         backgroundColor: AppColors.primary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          "Edit Medicines",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: SafeArea(
         child: Padding(

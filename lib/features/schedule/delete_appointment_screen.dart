@@ -22,7 +22,6 @@ class _DeleteAppointmentScreenState extends State<DeleteAppointmentScreen> {
     loadAppointments();
   }
 
-  //Load appointments
   Future<void> loadAppointments() async {
 
     final elderId = await SessionManager.getElderId();
@@ -42,7 +41,6 @@ class _DeleteAppointmentScreenState extends State<DeleteAppointmentScreen> {
     });
   }
 
-  //Delete appointment
   Future<void> deleteAppointment(int id) async {
 
     await AppointmentService.deleteAppointment(id);
@@ -54,7 +52,6 @@ class _DeleteAppointmentScreenState extends State<DeleteAppointmentScreen> {
     loadAppointments();
   }
 
-  //Confirmation dialog
   void confirmDelete(int id) {
 
     showDialog(
@@ -98,8 +95,20 @@ class _DeleteAppointmentScreenState extends State<DeleteAppointmentScreen> {
       backgroundColor: AppColors.mainBackground,
 
       appBar: AppBar(
-        title: const Text("Delete Appointment"),
         backgroundColor: AppColors.primary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          "Delete Appointment",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
 
       body: loading

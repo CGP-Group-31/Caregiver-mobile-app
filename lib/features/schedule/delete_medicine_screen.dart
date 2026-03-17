@@ -46,7 +46,6 @@ class _DeleteMedicineScreenState extends State<DeleteMedicineScreen> {
     loadMedicines();
   }
 
-  // ⭐ Confirmation Dialog
   void confirmDelete(int medicationId) {
 
     showDialog(
@@ -90,8 +89,20 @@ class _DeleteMedicineScreenState extends State<DeleteMedicineScreen> {
       backgroundColor: AppColors.mainBackground,
 
       appBar: AppBar(
-        title: const Text("Delete Medicine"),
         backgroundColor: AppColors.primary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          "Delete Medicine",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
 
       body: loading
