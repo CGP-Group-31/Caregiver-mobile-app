@@ -25,14 +25,13 @@ class _AddMoreInformationScreenState extends State<AddMoreInformationScreen> {
     setState(() => _loading = true);
 
     try {
-
       final now = DateTime.now();
 
       await DioClient.dio.post(
         "/api/v1/caregiver/additional-info/",
         data: {
-          "elder_id": 1,   // TODO: replace with session elder id
-          "caregiver_id": 1, // TODO: replace with session caregiver id
+          "elder_id": 1,
+          "caregiver_id": 1,
           "cognitive_behavior_notes": _cognitiveController.text,
           "preferences": _preferencesController.text,
           "social_emotional_behavior_notes": _socialController.text,
@@ -49,13 +48,12 @@ class _AddMoreInformationScreenState extends State<AddMoreInformationScreen> {
       );
 
       Navigator.pop(context);
-
     } catch (e) {
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        const SnackBar(content: Text("It's available on Sunday 15.00 to 23.59")),
       );
 
     } finally {
@@ -77,211 +75,209 @@ class _AddMoreInformationScreenState extends State<AddMoreInformationScreen> {
   Widget build(BuildContext context) {
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.mainBackground,
+
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          "Add Information",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
 
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
 
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: Container(
+            padding: const EdgeInsets.all(20),
 
-              /// BACK BUTTON
-              Row(
-                children: [
+            decoration: BoxDecoration(
+              color: AppColors.containerBackground,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0,5),
+                )
+              ],
+            ),
 
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
 
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(width: 16),
-
-                  const Text(
-                    "Add Information",
+                const Center(
+                  child: Text(
+                    "COMPANION BEHAVIOURS",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primaryText,
+                      color: AppColors.primary,
+                      letterSpacing: 1,
                     ),
                   ),
-                ],
-              ),
+                ),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 12),
 
-              /// TITLE
-              const Center(
-                child: Text(
-                  "ADD MORE INFORMATION",
+                const Text(
+                  "Below data will be used to provide more personalized and better companion experience.",
                   style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                    letterSpacing: 1,
+                    fontSize: 14,
+                    color: AppColors.descriptionText,
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 25),
 
-              /// DESCRIPTION
-              const Text(
-                "Below data will be used to provide more personalized and better companion experience to user.",
-                style: TextStyle(
-                  fontSize: 15,
-                  color: AppColors.descriptionText,
+                _inputBox(
+                  controller: _cognitiveController,
+                  hint: "Cognitive behavior notes",
                 ),
-              ),
+                const SizedBox(height: 25),
 
-              const SizedBox(height: 25),
+                _inputBox(
+                  controller: _preferencesController,
+                  hint: "Preferences",
+                ),
 
-              /// FIELD 1
-              _sectionTitle("1. Cognitive behavior notes about elder"),
-              const SizedBox(height: 8),
-              _inputBox(
-                controller: _cognitiveController,
-                hint: "Ex: Forgets meals",
-              ),
+                const SizedBox(height: 25),
 
-              const SizedBox(height: 20),
+                _inputBox(
+                  controller: _socialController,
+                  hint: "Social & emotional behavior",
+                ),
+                const SizedBox(height: 25),
 
-              /// FIELD 2
-              _sectionTitle("2. Preferences of the elder"),
-              const SizedBox(height: 8),
-              _inputBox(
-                controller: _preferencesController,
-                hint:
-                "Ex: Calms down listening to Pirith / Dislike loud places",
-              ),
+                _inputBox(
+                  controller: _healthController,
+                  hint: "Health goals",
+                ),
+                const SizedBox(height: 25),
 
-              const SizedBox(height: 20),
+                _inputBox(
+                  controller: _specialController,
+                  hint: "Special notes / observations",
+                ),
 
-              /// FIELD 3
-              _sectionTitle("3. Social & Emotional behavior notes"),
-              const SizedBox(height: 8),
-              _inputBox(
-                controller: _socialController,
-                hint: "Ex: Anxious when alone",
-              ),
+                const SizedBox(height: 30),
 
-              const SizedBox(height: 20),
-
-              /// FIELD 4
-              _sectionTitle("4. Health Goals of the elder"),
-              const SizedBox(height: 8),
-              _inputBox(
-                controller: _healthController,
-                hint: "Ex: Reduce Blood pressure level",
-              ),
-
-              const SizedBox(height: 20),
-
-              /// FIELD 5
-              _sectionTitle("5. Other special notes/observations"),
-              const SizedBox(height: 8),
-              _inputBox(
-                controller: _specialController,
-                hint: "",
-                maxLines: 4,
-              ),
-
-              const SizedBox(height: 40),
-
-              /// DONE BUTTON
-              Align(
-                alignment: Alignment.centerRight,
-
-                child: SizedBox(
-                  width: 110,
-                  height: 45,
-
+                SizedBox(
+                  width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical:14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-
                     onPressed: _loading ? null : _submitInfo,
-
-                    child: Text(
-                      _loading ? "Saving..." : "Done",
-                      style: const TextStyle(
-                        fontSize: 16,
+                    child: _loading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                      "Submit Information",
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                   ),
-                ),
-              )
-            ],
+                )
+
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// SECTION TITLE
-  static Widget _sectionTitle(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: AppColors.primary,
+  Widget _sectionTitle(String title){
+    return Padding(
+      padding: const EdgeInsets.only(bottom:10),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize:16,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primaryText,
+        ),
       ),
     );
   }
 
-  /// INPUT BOX
   static Widget _inputBox({
     required TextEditingController controller,
     required String hint,
     int maxLines = 2,
   }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
 
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(
-          fontSize: 14,
-          color: Colors.grey,
-        ),
-
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.primary,
+        Text(
+          hint,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primaryText,
           ),
         ),
 
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.primary,
-            width: 2,
+        const SizedBox(height: 8),
+
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 16,
+          ),
+
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.sectionBackground,
+
+            hintText: "Enter $hint",
+
+            hintStyle: const TextStyle(
+              color: Colors.grey,
+              fontSize: 14,
+            ),
+
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide.none,
+            ),
+
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: const BorderSide(
+                color: AppColors.primary,
+                width: 2,
+              ),
+            ),
+
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

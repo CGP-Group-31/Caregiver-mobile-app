@@ -92,6 +92,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
       appBar: AppBar(
         backgroundColor: AppColors.primary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
         title: const Text(
           "Medication Schedule",
           style: TextStyle(
@@ -122,7 +128,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
             buildCard(
               icon: Icons.edit_calendar,
-              title: "Update Medicine",
+              title: " View & Update Medicine",
               subtitle: "Edit an existing medicine schedule",
               onTap: () {
                 Navigator.push(

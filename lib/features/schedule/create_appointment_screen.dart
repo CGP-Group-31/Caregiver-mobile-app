@@ -25,8 +25,10 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
 
   bool loading = false;
 
-  Future<void> pickDate() async {
+  bool showDateError = false;
+  bool showTimeError = false;
 
+  Future<void> pickDate() async {
     final picked = await showDatePicker(
       context: context,
       firstDate: DateTime.now(),
@@ -34,49 +36,91 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
       initialDate: DateTime.now(),
     );
 
-    if(picked!=null){
-      setState(() => appointmentDate = picked);
+    if (picked != null) {
+      setState(() {
+        appointmentDate = picked;
+        showDateError = false;
+      });
     }
   }
 
   Future<void> pickTime() async {
-
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
     );
 
-    if(picked!=null){
-      setState(() => appointmentTime = picked);
+    if (picked != null) {
+      setState(() {
+        appointmentTime = picked;
+        showTimeError = false;
+      });
     }
   }
 
   Future<void> createAppointment() async {
 
-    if(!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    if (appointmentDate == null) {
+      setState(() => showDateError = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select appointment date")),
+      );
+      await pickDate();
+      return;
+    }
+
+    if (appointmentTime == null) {
+      setState(() => showTimeError = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select appointment time")),
+      );
+      await pickTime();
+      return;
+    }
 
     final elderId = await SessionManager.getElderId();
 
-    setState(()=>loading=true);
+    if (elderId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Elder ID not found")),
+      );
+      return;
+    }
 
-    await AppointmentService.createAppointment(
-      elderId: elderId!,
-      doctorName: doctorCtrl.text,
-      title: titleCtrl.text,
-      location: locationCtrl.text,
-      notes: notesCtrl.text,
-      appointmentDate: DateFormat('yyyy-MM-dd').format(appointmentDate!),
-      appointmentTime: "${appointmentTime!.hour}:${appointmentTime!.minute}",
-    );
+    final formattedTime =
+        "${appointmentTime!.hour.toString().padLeft(2, '0')}:"
+        "${appointmentTime!.minute.toString().padLeft(2, '0')}";
 
-    setState(()=>loading=false);
+    setState(() => loading = true);
 
-    if(!mounted) return;
+    try {
+      await AppointmentService.createAppointment(
+        elderId: elderId,
+        doctorName: doctorCtrl.text,
+        title: titleCtrl.text,
+        location: locationCtrl.text,
+        notes: notesCtrl.text,
+        appointmentDate: DateFormat('yyyy-MM-dd').format(appointmentDate!),
+        appointmentTime: formattedTime,
+      );
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text("Appointment created")));
+      if (!mounted) return;
 
-    Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Appointment created successfully")),
+      );
+
+      Navigator.pop(context);
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    } finally {
+      setState(() => loading = false);
+    }
   }
 
   @override
@@ -86,9 +130,20 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
       backgroundColor: AppColors.mainBackground,
 
       appBar: AppBar(
-        title: const Text("Create Appointment"),
         backgroundColor: AppColors.primary,
-        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          "Create Appointments",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
 
       body: SafeArea(
@@ -135,11 +190,16 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
 
                   const SizedBox(height:16),
 
-                  _input(locationCtrl,"Location"),
+                  _input(locationCtrl,"Hospital Name"),
 
                   const SizedBox(height:16),
 
-                  _input(notesCtrl,"Notes"),
+                  TextFormField(
+                    controller: notesCtrl,
+                    maxLength: 200,
+                    validator: (v) => v!.isEmpty ? "Required" : null,
+                    decoration: _inputDecoration("Notes"),
+                  ),
 
                   const SizedBox(height:30),
 
@@ -160,6 +220,8 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
                         ? "Select Date"
                         : DateFormat('yyyy-MM-dd').format(appointmentDate!),
                     onTap: pickDate,
+                    showError: showDateError,
+                    errorText: "Date is required",
                   ),
 
                   const SizedBox(height:12),
@@ -168,8 +230,10 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
                     icon: Icons.access_time,
                     title: appointmentTime==null
                         ? "Select Time"
-                        : "${appointmentTime!.hour}:${appointmentTime!.minute}",
+                        : "${appointmentTime!.hour.toString().padLeft(2,'0')}:${appointmentTime!.minute.toString().padLeft(2,'0')}",
                     onTap: pickTime,
+                    showError: showTimeError,
+                    errorText: "Time is required",
                   ),
 
                   const SizedBox(height:30),
@@ -214,22 +278,22 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
     return TextFormField(
       controller: c,
       validator: (v)=>v!.isEmpty?"Required":null,
+      decoration: _inputDecoration(label),
+    );
+  }
 
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: AppColors.textShade),
-
-        filled: true,
-        fillColor: AppColors.sectionBackground,
-
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
-        ),
-
-        contentPadding:
-        const EdgeInsets.symmetric(horizontal:16,vertical:14),
+  InputDecoration _inputDecoration(String label){
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.textShade),
+      filled: true,
+      fillColor: AppColors.sectionBackground,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
       ),
+      contentPadding:
+      const EdgeInsets.symmetric(horizontal:16,vertical:14),
     );
   }
 
@@ -237,20 +301,39 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    required bool showError,
+    required String errorText,
   }){
 
-    return Container(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
 
-      decoration: BoxDecoration(
-        color: AppColors.sectionBackground,
-        borderRadius: BorderRadius.circular(14),
-      ),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.sectionBackground,
+            borderRadius: BorderRadius.circular(14),
+            border: showError
+                ? Border.all(color: Colors.red)
+                : null,
+          ),
 
-      child: ListTile(
-        leading: Icon(icon,color: AppColors.primary),
-        title: Text(title),
-        onTap: onTap,
-      ),
+          child: ListTile(
+            leading: Icon(icon,color: AppColors.primary),
+            title: Text(title),
+            onTap: onTap,
+          ),
+        ),
+
+        if(showError)
+          Padding(
+            padding: const EdgeInsets.only(left:12, top:4),
+            child: Text(
+              errorText,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          )
+      ],
     );
   }
 }
