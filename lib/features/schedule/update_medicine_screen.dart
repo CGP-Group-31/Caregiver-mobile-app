@@ -44,8 +44,20 @@ class _UpdateMedicineScreenState extends State<UpdateMedicineScreen> {
       backgroundColor: AppColors.mainBackground,
 
       appBar: AppBar(
-        title: const Text("Update Medicine"),
         backgroundColor: AppColors.primary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          "Update Medicines",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
 
       body: loading

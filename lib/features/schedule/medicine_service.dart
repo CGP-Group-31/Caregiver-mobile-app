@@ -3,9 +3,8 @@ import '../../core/network/dio_client.dart';
 
 class MedicineService {
 
-  /// -----------------------------
   /// CREATE MEDICINE
-  /// -----------------------------
+
   static Future<void> createMedicine({
     required int elderId,
     required int caregiverId,
@@ -58,9 +57,7 @@ class MedicineService {
   }
 
 
-  /// -----------------------------
   /// GET MEDICINE BY ID
-  /// -----------------------------
   static Future<Map<String, dynamic>> getMedicineById(int medicineId) async {
 
     try {
@@ -84,9 +81,7 @@ class MedicineService {
   }
 
 
-  /// -----------------------------
   /// UPDATE MEDICINE
-  /// -----------------------------
   static Future<void> updateMedicine({
     required int medicineId,
     required String name,
@@ -136,9 +131,9 @@ class MedicineService {
   }
 
 
-  /// -----------------------------
+
   /// DELETE MEDICINE (SOFT DELETE)
-  /// -----------------------------
+
   static Future<void> deleteMedicine(int medicineId) async {
 
     try {

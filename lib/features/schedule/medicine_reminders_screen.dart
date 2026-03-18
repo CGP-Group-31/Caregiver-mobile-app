@@ -223,7 +223,19 @@ class _MedicineRemindersScreenState extends State<MedicineRemindersScreen> {
 
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        title: const Text("Add Medicines"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          "Add Medicines",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
 
       body: SafeArea(
