@@ -6,6 +6,7 @@ import '../schedule/main_schedule.dart';
 import '../messages/messages_screen.dart';
 import '../alerts/alerts_screen.dart';
 import '../navigation/caregiver_glass_nav.dart';
+import '../reports/reports_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -27,6 +28,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       const DashboardScreen(),
       const MainScheduleScreen(),
       const MessagesScreen(),
+      const ReportsScreen(),
       ElderProfileScreen(onBackToHome: () => _onItemTapped(0)),
     ];
 
