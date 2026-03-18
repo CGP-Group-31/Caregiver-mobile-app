@@ -3,6 +3,7 @@ import '../../core/session/session_manager.dart';
 import '../../features/auth/theme.dart';
 import '../auth/login_screen.dart';
 import 'caregiver_profile_screen.dart';
+import 'complaints_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -168,6 +169,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _goToComplaints() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ComplaintsScreen()),
+    );
+  }
+
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(6, 14, 6, 10),
@@ -299,10 +307,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-
               _sectionTitle("Support"),
               _settingsCard(
                 children: [
+                  _tile(
+                    icon: Icons.feedback_rounded,
+                    title: "Complaints",
+                    subtitle: "Report an issue about the app",
+                    onTap: _goToComplaints,
+                  ),
+                  _divider(),
                   _tile(
                     icon: Icons.privacy_tip_rounded,
                     title: "Privacy Policy",
@@ -318,7 +332,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-
               _sectionTitle("Session"),
               _settingsCard(
                 children: [
