@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-
-import '../auth/theme.dart';
 import 'package:caregiver/core/session/session_manager.dart';
 
-enum MealStatus { missed, pending, taken }
+import '../auth/theme.dart';
+import 'meal_item.dart';
+import 'meals_service.dart';
 
 class MealsHydrationScreen extends StatefulWidget {
   const MealsHydrationScreen({
@@ -49,6 +47,7 @@ class _MealsHydrationScreenState extends State<MealsHydrationScreen> {
       final elderId = await SessionManager.getElderId();
 
       if (elderId == null) {
+        if (!mounted) return;
         setState(() {
           _error = "Elder ID not found in session.";
           _loading = false;
@@ -61,6 +60,9 @@ class _MealsHydrationScreenState extends State<MealsHydrationScreen> {
       if (meals.isEmpty) {
         if (!mounted) return;
         setState(() {
+          _breakfastStatus = MealStatus.pending;
+          _lunchStatus = MealStatus.pending;
+          _dinnerStatus = MealStatus.pending;
           _noMealsToday = true;
           _loading = false;
         });
@@ -96,7 +98,7 @@ class _MealsHydrationScreenState extends State<MealsHydrationScreen> {
       if (!mounted) return;
 
       setState(() {
-        _error = "Failed to load meals: $e";
+        _error = e.toString();
         _loading = false;
       });
     }
@@ -341,78 +343,9 @@ class _MealsHydrationScreenState extends State<MealsHydrationScreen> {
   }
 }
 
-class MealItem {
-  final int mealAdherenceId;
-  final int elderId;
-  final String mealTime;
-  final String scheduledFor;
-  final MealStatus status;
-  final String? diet;
-  final String? updatedAt;
-
-  MealItem({
-    required this.mealAdherenceId,
-    required this.elderId,
-    required this.mealTime,
-    required this.scheduledFor,
-    required this.status,
-    this.diet,
-    this.updatedAt,
-  });
-
-  factory MealItem.fromJson(Map<String, dynamic> json) {
-    return MealItem(
-      mealAdherenceId: json['MealAdherenceID'] ?? 0,
-      elderId: json['ElderID'] ?? 0,
-      mealTime: (json['MealTime'] ?? '').toString(),
-      scheduledFor: (json['ScheduledFor'] ?? '').toString(),
-      status: _parseMealStatus((json['Status'] ?? '').toString()),
-      diet: json['Diet']?.toString(),
-      updatedAt: json['UpdatedAt']?.toString(),
-    );
-  }
-
-  static MealStatus _parseMealStatus(String status) {
-    switch (status.trim().toUpperCase()) {
-      case 'TAKEN':
-        return MealStatus.taken;
-      case 'MISSED':
-        return MealStatus.missed;
-      case 'PENDING':
-      default:
-        return MealStatus.pending;
-    }
-  }
-}
-
-class MealsService {
-  static const String baseUrl = "http://10.0.2.2:8000/api/v1/elder/meals";
-
-  Future<List<MealItem>> getTodayMeals(int elderId) async {
-    final url = Uri.parse("$baseUrl/today/$elderId");
-
-    final response = await http.get(
-      url,
-      headers: {"Accept": "application/json"},
-    );
-
-    if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
-      final List items = decoded["items"] ?? [];
-
-      return items
-          .map((item) => MealItem.fromJson(item as Map<String, dynamic>))
-          .toList();
-    } else {
-      throw Exception(
-        "Server returned ${response.statusCode}: ${response.body}",
-      );
-    }
-  }
-}
-
 class _MainCard extends StatelessWidget {
   const _MainCard({required this.child});
+
   final Widget child;
 
   @override
@@ -438,6 +371,7 @@ class _MainCard extends StatelessWidget {
 
 class _ChipLabel extends StatelessWidget {
   const _ChipLabel({required this.text});
+
   final String text;
 
   @override
@@ -498,31 +432,32 @@ class _MealRow extends StatelessWidget {
 
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.status});
+
   final MealStatus status;
 
   @override
   Widget build(BuildContext context) {
-    final _StatusStyle s = _style(status);
+    final _StatusStyle style = _style(status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: s.bg,
+        color: style.bg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: s.border),
+        border: Border.all(color: style.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(s.icon, size: 18, color: s.fg),
+          Icon(style.icon, size: 18, color: style.fg),
           const SizedBox(width: 8),
           Text(
-            s.label,
+            style.label,
             style: TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.5,
-              color: s.fg,
+              color: style.fg,
             ),
           ),
         ],
@@ -530,8 +465,8 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 
-  _StatusStyle _style(MealStatus st) {
-    switch (st) {
+  _StatusStyle _style(MealStatus status) {
+    switch (status) {
       case MealStatus.taken:
         return _StatusStyle(
           label: "TAKEN",
@@ -540,7 +475,6 @@ class _StatusBadge extends StatelessWidget {
           bg: AppColors.sectionBackground.withOpacity(0.55),
           border: AppColors.sectionSeparator,
         );
-
       case MealStatus.pending:
         return _StatusStyle(
           label: "PENDING",
@@ -549,7 +483,6 @@ class _StatusBadge extends StatelessWidget {
           bg: AppColors.alertNonCritical.withOpacity(0.25),
           border: AppColors.alertNonCritical.withOpacity(0.55),
         );
-
       case MealStatus.missed:
         return _StatusStyle(
           label: "MISSED",
