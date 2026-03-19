@@ -1,8 +1,10 @@
+import 'package:caregiver/features/schedule/appointment_schedule_screen.dart';
 import 'package:flutter/material.dart';
 import '../../core/session/session_manager.dart';
 import '../dashboard/app_colors.dart';
 import '../dashboard/settings_screen.dart';
 import '../dashboard/dashboard_service.dart';
+import '../elder/services/notification_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -12,6 +14,12 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+
+  int _missedMedicineCount = 0;
+  int _upcomingAppointmentsCount = 0;
+  int _todayScheduledCount = 0;
+  int _todayTakenCount = 0;
+
   final DashboardService _service = DashboardService();
 
   bool _loading = true;
@@ -24,6 +32,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState(){
     super.initState();
     _loadDashboard();
+    NotificationService.init();
+    NotificationService.scheduleWeeklyReminder();
+  }
+
+  void _handleAlertTap(BuildContext context, String type) {
+    switch (type) {
+      case "upcoming_appointment":
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const AppointmentScheduleScreen()));
+      break;
+
+      default:
+      break;
+    }
   }
 
   Future<void> _loadDashboard() async{
@@ -49,11 +70,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
       return;
     }
-    try {
-      final data = await _service.fetchDashboardHome(
-        elderId: elderId,
-        caregiverId: caregiverId,
-      );
+    try{
+      final results = await Future.wait([
+        _service.fetchDashboardHome(
+          elderId: elderId,
+          caregiverId: caregiverId,
+        ),
+        _service.fetchMissedMedicineCount(elderId),
+        _service.fetchUpcomingAppointmentsCount(elderId),
+        _service.fetchTodayScheduleCount(elderId),
+        _service.fetchTodayTakenCount(elderId),
+      ]);
+
+      final data = results[0] as Map<String, dynamic>;
 
       setState(() {
         _caregiverName =
@@ -61,9 +90,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 .toString();
 
         _alerts = (data["quick_alerts"] as List<dynamic>?) ?? [];
+
+        _missedMedicineCount = results[1] as int;
+        _upcomingAppointmentsCount = results[2] as int;
+        _todayScheduledCount = results[3] as int;
+        _todayTakenCount = results[4] as int;
+
         _loading = false;
       });
-    } catch (e){
+    } catch (e) {
       setState(() {
         _loading = false;
         _error = e.toString();
@@ -180,6 +215,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                         const SizedBox(height: 20),
 
+                        const Text(
+                          "Summary Statistics",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _summaryCard(
+                                title: "Missed Today",
+                                value: _missedMedicineCount.toString(),
+                                icon: Icons.medication_outlined,
+                                color: AppColors.warning,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _summaryCard(
+                                title: "Appointments",
+                                value: _upcomingAppointmentsCount.toString(),
+                                icon: Icons.event_outlined,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _summaryCard(
+                                title: "Scheduled",
+                                value: _todayScheduledCount.toString(),
+                                icon: Icons.schedule_rounded,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _summaryCard(
+                                title: "Taken",
+                                value: _todayTakenCount.toString(),
+                                icon: Icons.check_circle_outline_rounded,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
                         ///Quick Alerts
                         const Text(
                           "Quick Alerts",
@@ -208,6 +302,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             subtitle: subtitle,
                             icon: _iconForType(type),
                             color: AppColors.warning,
+                            onTap: () => _handleAlertTap(context, type),
                           );
                         }),
                       ],
@@ -235,6 +330,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         child: Icon(icon, color: AppColors.textPrimary),
+      ),
+    );
+  }
+
+  Widget _summaryCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.65),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -298,60 +450,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String subtitle,
     required IconData icon,
     required Color color,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.65),
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.78),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.65),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(14),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: color),
             ),
-            child: Icon(icon, color: color),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    color: AppColors.textPrimary,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13.5,
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13.5,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
       ),
     );
   }

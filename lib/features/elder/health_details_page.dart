@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../auth/theme.dart';
 import 'vitals_show_page.dart';
 import 'vitals_add_page.dart';
+import 'caregiver_questionnaire.dart';
 
 class HealthDetailsPage extends StatelessWidget {
   const HealthDetailsPage({super.key});
@@ -64,7 +65,7 @@ class HealthDetailsPage extends StatelessWidget {
           const SizedBox(height: 12),
 
           _DisabledCard(
-            title: "Allergies",
+            title: "Add more informations",
             subtitle: "Save allergies & reactions",
             icon: Icons.warning_amber_rounded,
           ),
@@ -79,6 +80,17 @@ class HealthDetailsPage extends StatelessWidget {
             title: "Reports / Documents",
             subtitle: "Upload lab reports & files",
             icon: Icons.folder_rounded,
+          ),
+          const SizedBox(height: 10),
+          _ActionCard(
+            title: "Daily Questionnaire",
+            subtitle: "About elder more information",
+            icon: Icons.assessment_rounded,
+            bg: AppColors.containerBackground,
+            onTap: () => _open(
+              context,
+              const AddMoreInformationScreen(),
+            ),
           ),
         ],
       ),
