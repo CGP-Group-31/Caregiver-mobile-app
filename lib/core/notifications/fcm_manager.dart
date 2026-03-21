@@ -18,8 +18,8 @@ class FCMManager {
     // Token refresh listener
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
       await SessionManager.saveFCMToken(newToken);
-      // Optionally send to backend if user is logged in
-      // (You can do it later when you have userId)
+
+
     });
 
     return token;

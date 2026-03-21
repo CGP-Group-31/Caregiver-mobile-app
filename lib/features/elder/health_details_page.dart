@@ -37,7 +37,7 @@ class HealthDetailsPage extends StatelessWidget {
               Expanded(
                 child: _ActionCard(
                   title: "View Vitals",
-                  subtitle: "Last 3 per category",
+                  subtitle: "View Latest Vitals",
                   icon: Icons.monitor_heart_rounded,
                   bg: AppColors.containerBackground,
                   onTap: () => _open(context, const VitalsShowPage()),
@@ -58,33 +58,10 @@ class HealthDetailsPage extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          const _SectionTitle(
-            title: "Coming soon",
-            subtitle: "Add more health data modules here",
-          ),
-          const SizedBox(height: 12),
 
-          _DisabledCard(
-            title: "Add more informations",
-            subtitle: "Save allergies & reactions",
-            icon: Icons.warning_amber_rounded,
-          ),
-          const SizedBox(height: 10),
-          _DisabledCard(
-            title: "Medical Conditions",
-            subtitle: "Chronic conditions & history",
-            icon: Icons.medical_information_rounded,
-          ),
-          const SizedBox(height: 10),
-          _DisabledCard(
-            title: "Reports / Documents",
-            subtitle: "Upload lab reports & files",
-            icon: Icons.folder_rounded,
-          ),
-          const SizedBox(height: 10),
           _ActionCard(
-            title: "Daily Questionnaire",
-            subtitle: "About elder more information",
+            title: "Weekly Wellness Questionnaire",
+            subtitle: "Share your companion's behavior this week, open Sunday evening.",
             icon: Icons.assessment_rounded,
             bg: AppColors.containerBackground,
             onTap: () => _open(
