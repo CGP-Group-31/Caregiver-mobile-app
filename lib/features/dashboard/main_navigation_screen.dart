@@ -28,7 +28,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       const DashboardScreen(),
       const MainScheduleScreen(),
       const MessagesScreen(),
-      const ReportsScreen(),
       ElderProfileScreen(onBackToHome: () => _onItemTapped(0)),
     ];
 

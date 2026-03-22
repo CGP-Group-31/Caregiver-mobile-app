@@ -6,6 +6,7 @@ import 'medical_record_screen.dart';
 import 'edit_elder_profile_screen.dart';
 import '../location/caregiver_view_location.dart';
 import '../auth/theme.dart';
+import '../reports/reports_screen.dart';
 
 class ElderProfileScreen extends StatefulWidget {
   final VoidCallback? onBackToHome;
@@ -112,7 +113,7 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                     ),
                     centerTitle: true,
                     title: const Text(
-                      "ELDER PROFILE",
+                      "CARE RECIPIENT PROFILE",
                       style: TextStyle(
                         color: AppColors.primaryText,
                         fontWeight: FontWeight.w900,
@@ -128,12 +129,12 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 20),
-                          
+
 
                           _buildMinimizedSummaryCard(elder),
-                          
+
                           const SizedBox(height: 40),
-                          
+
 
                           _buildNavCard(
                             title: "Health Details",
@@ -141,14 +142,14 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                             icon: Icons.favorite_outline_rounded,
                             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HealthDetailsPage())),
                           ),
-                          
+
                           _buildNavCard(
                             title: "Medical Background",
                             description: "Allergies, Chronic Conditions & Meds",
                             icon: Icons.history_edu_rounded,
                             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MedicalRecordScreen())),
                           ),
-                          
+
                           _buildNavCard(
                             title: "Location",
                             description: "Live Tracking & History",
@@ -157,15 +158,15 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                           ),
 
                           _buildNavCard(
-                            title: "Weekly Reports",
+                            title: "Reports",
                             description: "AI Health Analysis",
                             icon: Icons.auto_graph_rounded,
-                            onTap: () {
-                              // Weekly Reports functionality is handled by teammate
-                            },
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen())),
                           ),
-                          
-                          const SizedBox(height: 50),
+
+                          SizedBox(
+                            height: MediaQuery.of(context).padding.bottom + 100,
+                          ),
                         ],
                       ),
                     ),
@@ -222,7 +223,7 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
             style: const TextStyle(color: AppColors.descriptionText, fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
-          
+
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: const BoxDecoration(
@@ -254,7 +255,7 @@ class _ElderProfileScreenState extends State<ElderProfileScreen> {
                     if (updated == true) _loadData();
                   },
                   child: const Text(
-                    "ELDER DETAILS", 
+                    "ELDER DETAILS",
                     style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1),
                   ),
                 ),
