@@ -17,7 +17,6 @@ class CaregiverGlassNav extends StatelessWidget {
       _NavItemData(icon: Icons.home_rounded, label: "Home"),
       _NavItemData(icon: Icons.calendar_today_rounded, label: "Schedule"),
       _NavItemData(icon: Icons.chat_bubble_rounded, label: "Messages"),
-      _NavItemData(icon: Icons.description_rounded, label: "Reports"),
       _NavItemData(icon: Icons.person_rounded, label: "Elder"),
     ];
 
