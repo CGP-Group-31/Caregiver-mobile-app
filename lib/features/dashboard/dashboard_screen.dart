@@ -156,7 +156,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 Text(
                                   "Welcome, $_caregiverName 👋",
                                   style: const TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 16,
                                     color: AppColors.textSecondary,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -188,30 +188,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                         const SizedBox(height: 20),
 
-                        ///AI summary
-                        _glassCard(
-                          child: const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Last AI Check-in Summary",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              Text(
-                                "AI summary will appear here once connected.",
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
 
                         const SizedBox(height: 20),
 
